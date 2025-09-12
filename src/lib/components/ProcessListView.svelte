@@ -43,7 +43,7 @@
     </div>
     <button class="create-btn" on:click={() => dispatch('navigate', { view: 'new-process' })}>
       <Icon name="plus" size={20}/>
-      Crear Nuevo Proceso
+      Crear nueva solicitud
     </button>
   </div>
 

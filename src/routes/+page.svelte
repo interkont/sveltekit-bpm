@@ -38,6 +38,14 @@
 		toast.show(`Tarea "${task.taskName}" finalizada con éxito.`);
 		taskDetailStore.hide();
 	}
+
+    // --- FUNCIÓN UNIFICADA: Maneja los eventos de navegación de los componentes hijos ---
+    function handleNavigation(event: CustomEvent<{view: string}>) {
+        if (typeof window !== 'undefined') {
+            // Cambia el hash de la URL, lo que disparará el bloque reactivo de arriba
+            window.location.hash = event.detail.view;
+        }
+    }
 </script>
 
 {#if !$authStore.isAuthenticated}
@@ -49,13 +57,14 @@
 	{:else if currentView === 'tasks'}
 		<TaskListView />
 	{:else if currentView === 'processes'}
-		<ProcessListView />
+		<ProcessListView on:navigate={handleNavigation} />
 	{:else if currentView === 'process-models'}
 		<ProcessModelListView />
     {:else if currentView === 'test-modeler'}
 		<ModelerTest />
 	{:else if currentView === 'new-process'}
-		<NewProcessView />
+        <!-- AJUSTE: Se añade el manejador de eventos on:navigate -->
+		<NewProcessView on:navigate={handleNavigation} />
 	{/if}
 
 	<!-- Renderizado condicional de Paneles -->
@@ -71,4 +80,3 @@
 		<ProcessModelDetailView model={$processModelDetailStore.model} />
 	{/if}
 {/if}
-

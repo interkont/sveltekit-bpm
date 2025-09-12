@@ -222,13 +222,11 @@ button {
   color: white; 
 }
 .logout-btn {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  font-weight: 500;
-  cursor: pointer;
+    background-color: #f5656520;
+    color: var(--text-primary);
+    border-color: transparent;
 }
 .logout-btn:hover {
-  color: #c53030; /* Rojo de "peligro" */
+    background-color: #f5656540;
 }
 </style>

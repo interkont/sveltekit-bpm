@@ -1,4 +1,5 @@
 <script lang="ts">
+	import '../app.css';
 	// --- AJUSTE CLAVE: Importar CSS de BPMN globalmente ---
 	import '$lib/vendor/bpmn-styles/diagram-js.css';
 	import '$lib/vendor/bpmn-styles/bpmn-embedded.css';
@@ -18,7 +19,7 @@
 	// Stores para Paneles y Modales Globales
 	import { modal } from '$lib/stores/modal';
 	import { profilePanelStore } from '$lib/stores/profilePanelStore';
-    import { toast } from '$lib/stores/toast';
+	import { toast } from '$lib/stores/toast';
 
 	onMount(() => {
 		theme.init();
@@ -31,8 +32,8 @@
 		}
 		modal.hide();
 	}
-    
-    function handleProfileSubmit(event: CustomEvent<{name: string, email: string}>) {
+
+	function handleProfileSubmit(event: CustomEvent<{ name: string; email: string }>) {
 		const { name } = event.detail;
 		profilePanelStore.set(false);
 		toast.show(`Perfil de ${name} actualizado.`);
@@ -43,7 +44,7 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 	<link
-		href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+		href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"
 		rel="stylesheet"
 	/>
 </svelte:head>
@@ -51,22 +52,22 @@
 <div class="app-container">
 	{#if $authStore.isAuthenticated}
 		<div class="main-layout">
-			<Sidebar />
+			<Sidebar></Sidebar>
 			<div class="content-wrapper">
-				<Header />
+				<Header></Header>
 				<main class="main-content">
 					<!-- SvelteKit renderizará la página actual (+page.svelte) aquí -->
-					<slot />
+					<slot></slot>
 				</main>
 			</div>
 		</div>
 	{:else}
 		<!-- Renderizamos el slot para que la página de Login se muestre -->
-		<slot />
+		<slot></slot>
 	{/if}
 
 	<!-- Modales y Paneles Globales -->
-	<Toast />
+	<Toast></Toast>
 
 	<ConfirmModal
 		show={$modal.isOpen}
@@ -74,14 +75,14 @@
 		message={$modal.message}
 		on:confirm={handleConfirm}
 		on:cancel={modal.hide}
-	/>
+	></ConfirmModal>
 
 	{#if $profilePanelStore}
-		<ProfilePanel on:submit={handleProfileSubmit} />
+		<ProfilePanel on:submit={handleProfileSubmit}></ProfilePanel>
 	{/if}
 </div>
 
-<style global>
+<style>
 	:root {
 		--bg-primary: #ffffff;
 		--bg-secondary: #f9fafb;
@@ -106,7 +107,7 @@
 		--border-color: #4b5563;
 		--accent-color: #6366f1;
 	}
-	
+
 	:global(body) {
 		font-family: 'Inter', sans-serif;
 		background-color: var(--bg-secondary);
@@ -114,7 +115,7 @@
 		margin: 0;
 	}
 
-    .main-layout {
+	.main-layout {
 		display: flex;
 		height: 100vh;
 	}
