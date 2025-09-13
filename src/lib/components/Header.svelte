@@ -2,18 +2,29 @@
   import { theme } from '$lib/stores/theme';
   import Icon from '$lib/components/Icon.svelte';
   import { profilePanelStore } from '$lib/stores/profilePanelStore';
-  // --- MODIFICACIÓN: Importar el store de autenticación ---
   import { authStore } from '$lib/stores/authStore';
+  import { userStore } from '$lib/stores/userStore';
+  import { derived } from 'svelte/store'; // --- 1. Importar derived
+
+  // --- 2. Crear un store derivado para el usuario actual ---
+  const currentUserStore = derived(
+    [authStore, userStore], // Dependencias
+    ([$authStore, $userStore]) => { // Valores de los stores
+      if ($authStore.user?.uid && $userStore.length > 0) {
+        return $userStore.find(u => u.uid === $authStore.user.uid);
+      }
+      return undefined;
+    }
+  );
+
 </script>
 
 <header>
-	<!-- Lado Izquierdo: Buscador -->
 	<div class="search-bar">
     <Icon name="search" size={20}/>
     <input type="text" placeholder="Buscar procesos, tareas o usuarios...">
   </div>
 
-	<!-- Lado Derecho: Acciones y Perfil -->
 	<div class="header-actions">
 		<button on:click={theme.toggle} class="theme-toggle" title="Cambiar tema">
 			{#if $theme === 'light'}
@@ -33,13 +44,13 @@
 		
 		<div class="w-px h-6 bg-[var(--border-color)]"></div>
 
-		<!-- --- MODIFICACIÓN: Usar datos del usuario autenticado --- -->
-		{#if $authStore.user}
+		<!-- --- 3. Usar el nuevo store derivado en el HTML --- -->
+		{#if $currentUserStore}
 			<div class="user-profile" on:click={() => profilePanelStore.set(true)} title="Gestionar Perfil">
-				<img src={$authStore.user.avatarUrl} alt="Avatar de usuario">
+				<img src={$currentUserStore.avatarUrl} alt="Avatar de usuario">
 				<div class="user-info">
-					<span class="user-name">{$authStore.user.name}</span>
-					<span class="user-role">{$authStore.user.role}</span>
+					<span class="user-name">{$currentUserStore.displayName}</span>
+					<span class="user-role">{$currentUserStore.systemRole}</span>
 				</div>
 			</div>
 		{/if}
@@ -47,6 +58,7 @@
 </header>
 
 <style>
+/* Estilos sin cambios */
 header {
   display: flex;
   justify-content: space-between;
@@ -91,10 +103,9 @@ header {
 
 .user-profile { display: flex; align-items: center; gap: 1rem; cursor: pointer; }
 .user-profile img { width: 40px; height: 40px; border-radius: 50%; }
-.user-info .user-name { font-weight: 500; }
-.user-info .user-role { font-size: 0.85rem; color: var(--text-secondary); }
+.user-info .user-name { font-weight: 500; text-transform: capitalize; }
+.user-info .user-role { font-size: 0.85rem; color: var(--text-secondary); text-transform: capitalize; }
 
-/* Estilos adicionales para Tailwind (si no se usa) */
 .relative { position: relative; }
 .absolute { position: absolute; }
 .w-px { width: 1px; }

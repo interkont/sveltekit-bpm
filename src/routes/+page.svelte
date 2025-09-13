@@ -6,6 +6,7 @@
 	import { taskDetailStore } from '$lib/stores/taskDetailStore';
 	import { processDetailStore } from '$lib/stores/processDetailStore';
 	import { processModelDetailStore } from '$lib/stores/processModelDetailStore';
+    import { userDetailStore } from '$lib/stores/userDetailStore'; // <-- Importar store
 	import { toast } from '$lib/stores/toast';
     import type { Task } from '$lib/types';
 
@@ -17,11 +18,13 @@
 	import NewProcessView from '$lib/components/NewProcessView.svelte';
 	import ProcessModelListView from '$lib/components/ProcessModelListView.svelte';
 	import ModelerTest from '$lib/components/ModelerNew.svelte';
+    import UserManagementView from '$lib/components/UserManagementView.svelte';
 
 	// Paneles de Detalle
 	import TaskDetailPanel from '$lib/components/TaskDetailPanel.svelte';
 	import ProcessDetailView from '$lib/components/ProcessDetailView.svelte';
 	import ProcessModelDetailView from '$lib/components/ProcessModelDetailView.svelte';
+    import UserDetailPanel from '$lib/components/UserDetailPanel.svelte'; // <-- Importar panel
 	
 	let currentView = 'dashboard';
 
@@ -39,10 +42,8 @@
 		taskDetailStore.hide();
 	}
 
-    // --- FUNCIÓN UNIFICADA: Maneja los eventos de navegación de los componentes hijos ---
     function handleNavigation(event: CustomEvent<{view: string}>) {
         if (typeof window !== 'undefined') {
-            // Cambia el hash de la URL, lo que disparará el bloque reactivo de arriba
             window.location.hash = event.detail.view;
         }
     }
@@ -63,8 +64,9 @@
     {:else if currentView === 'test-modeler'}
 		<ModelerTest />
 	{:else if currentView === 'new-process'}
-        <!-- AJUSTE: Se añade el manejador de eventos on:navigate -->
 		<NewProcessView on:navigate={handleNavigation} />
+    {:else if currentView === 'users'} 
+        <UserManagementView />
 	{/if}
 
 	<!-- Renderizado condicional de Paneles -->
@@ -79,4 +81,8 @@
 	{#if $processModelDetailStore.isOpen}
 		<ProcessModelDetailView model={$processModelDetailStore.model} />
 	{/if}
+
+    {#if $userDetailStore.isOpen} <!-- NUEVO -->
+        <UserDetailPanel user={$userDetailStore.user} />
+    {/if}
 {/if}

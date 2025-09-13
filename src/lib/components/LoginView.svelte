@@ -1,10 +1,9 @@
 <script lang="ts">
-    // --- AJUSTE: Se actualizan las rutas de importación ---
     import { authStore } from '$lib/stores/authStore';
     import Icon from '$lib/components/Icon.svelte';
   
-    // --- AJUSTE: Se añaden los tipos a las variables de estado ---
-    let email: string = 'juan.perez@empresa.com'; // Pre-llenado para facilitar pruebas
+    // --- AJUSTE: Se actualiza el email pre-llenado para usar las credenciales funcionales ---
+    let email: string = 'ana.garcia@example.com';
     let password: string = 'password123';
     let errorMessage: string = '';
     let isLoading: boolean = false;
@@ -13,13 +12,8 @@
       isLoading = true;
       errorMessage = '';
       try {
-        // La lógica de login ahora está en el store
         await authStore.login(email, password);
-        // El componente App.svelte se encargará de cambiar la vista
       } catch (e) {
-        // --- AJUSTE: Manejo seguro del error de tipo 'unknown' ---
-        // Verificamos si el error capturado es una instancia de la clase Error.
-        // Si lo es, TypeScript sabrá con certeza que tiene una propiedad '.message'.
         if (e instanceof Error) {
           errorMessage = e.message;
         } else {
@@ -80,6 +74,7 @@
 </div>
 
 <style>
+    /* Estilos sin cambios */
     .login-container {
         display: flex;
         align-items: center;

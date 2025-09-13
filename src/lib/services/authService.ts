@@ -1,35 +1,21 @@
-// --- AJUSTE: Importamos la 'interface' User desde nuestro archivo central de tipos ---
 import type { User } from '$lib/types';
+import { users } from '$lib/data/users'; // Importamos la lista de usuarios
 
-// --- BASE DE DATOS SIMULADA ---
-// En un futuro, esto será reemplazado por llamadas a tu API.
-// --- AJUSTE: Aplicamos el tipo 'User' a nuestro objeto de maqueta ---
-const mockUser: User = {
-  id: 'usr_12345',
-  name: 'Juan Giraldo',
-  email: 'juan.perez@empresa.com',
-  role: 'Gerente de Procesos',
-  avatarUrl: 'https://placehold.co/128x128/EBF8FF/4299E1?text=JP'
-};
+// El servicio ahora usarÃ¡ el primer usuario de nuestra lista de datos como el usuario "correcto".
+const authenticatedUser: User = users[0]; // Ana GarcÃ­a (admin)
 
 /**
- * Simula la autenticación de un usuario contra un backend.
- * @param email - El correo del usuario.
- * @param password - La contraseña del usuario.
- * @returns Una promesa que resuelve con los datos del usuario si las credenciales son correctas.
+ * Simula la autenticaciÃ³n de un usuario.
+ * Ahora, en lugar de un mock local, valida contra el email del primer usuario de nuestros datos.
  */
-// --- AJUSTE: Se añaden los tipos a los parámetros y al valor de retorno de la función ---
 export const authenticateUser = (email: string, password: string): Promise<User> => {
   return new Promise((resolve, reject) => {
-    // Simulamos una pequeña demora de red
     setTimeout(() => {
-      if (email === mockUser.email && password === 'password123') {
-        // Credenciales correctas: devolvemos los datos del usuario
-        // TypeScript verifica que 'mockUser' cumpla con la 'interface User'
-        resolve(mockUser);
+      // Comparamos con el email del usuario de datos y una contraseÃ±a fija.
+      if (email === authenticatedUser.email && password === 'password123') {
+        resolve(authenticatedUser); // Devolvemos el objeto de usuario completo y consistente.
       } else {
-        // Credenciales incorrectas: rechazamos la promesa
-        reject(new Error('Credenciales incorrectas. Inténtalo de nuevo.'));
+        reject(new Error('Credenciales incorrectas. IntÃ©ntalo de nuevo.'));
       }
     }, 800);
   });
