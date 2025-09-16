@@ -133,4 +133,8 @@
 		overflow-y: auto;
 		padding: 2rem;
 	}
+	:global(.list-name) {
+		font-weight: 700;
+    	color: var(--text-primary);
+	}
 </style>

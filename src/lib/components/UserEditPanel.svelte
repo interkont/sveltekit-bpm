@@ -22,6 +22,14 @@
   
   let isRoleDropdownOpen = false;
 
+  // Tailwind classes for process role tags
+  const tagColors = [
+    'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100',
+    'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100',
+    'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100',
+    'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-100',
+  ];
+
   // --- Computed properties ---
   $: assignedRoles = $processRoleStore.filter(role => userData.processRoles?.includes(role.key));
   $: availableRoles = $processRoleStore.filter(role => !userData.processRoles?.includes(role.key));
@@ -117,6 +125,12 @@
         <div class="form-group">
           <label for="systemRole" class="form-label">Rol del Sistema</label>
           <select id="systemRole" class="form-input" bind:value={userData.systemRole}>
+            <!-- Display the selected system role as a badge -->
+            {#if userData.systemRole}
+              <span class="px-2 py-px text-xs font-semibold rounded-full uppercase {userData.systemRole === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}">
+                {userData.systemRole}
+              </span>
+            {/if}
             <option value="user">Usuario</option>
             <option value="admin">Administrador</option>
           </select>
@@ -127,9 +141,9 @@
             <div class="roles-container">
                 <div class="role-tags">
                     {#each assignedRoles as role (role.key)}
-                        <div class="role-tag">
+                        <div class="inline-flex items-center px-2 py-px text-xs font-semibold rounded-full uppercase {tagColors[assignedRoles.indexOf(role) % tagColors.length]}">
                             {role.name}
-                            <button type="button" class="remove-tag-btn" on:click={() => removeRole(role.key)}>
+                            <button type="button" class="ml-1 p-px rounded-full hover:bg-black hover:bg-opacity-10 flex items-center justify-center text-current" on:click={() => removeRole(role.key)}>
                                 <Icon name="x" size={14} />
                             </button>
                         </div>

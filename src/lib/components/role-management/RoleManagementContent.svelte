@@ -59,14 +59,14 @@
           <th>Rol</th>
           <th>Cantidad</th>
           <th>Miembros</th>
-          <th class="text-right">Acciones</th>
+          <th class="text-center">Acciones</th>
         </tr>
       </thead>
       <tbody class="table-body">
         {#each filteredRolesWithMembers as { role, members } (role.key)}
           <tr class="table-row">
             <td class="cell-primary">
-              <div class="font-medium">{role.name}</div>
+              <div class="list-name">{role.name}</div>
               <div class="text-secondary">{role.description || 'Sin descripción'}</div>
             </td>
             <td>
@@ -96,8 +96,8 @@
                 {/if}
               </div>
             </td>
-            <td class="text-right">
-              <button class="btn-edit" on:click={() => handleManageMembers(role)}>
+            <td class="text-center">
+              <button class="btn px-6 py-2 border-2 border-indigo-400 rounded-lg bg-indigo-400/10 hover:shadow-lg text-indigo-600 dark:text-indigo-300" on:click={() => handleManageMembers(role)}>
                 Gestionar
               </button>
             </td>
@@ -157,6 +157,13 @@
     justify-content: center;
     font-size: 0.75rem;
     font-weight: 600;
+  }
+  .text-center {
+    text-align: center !important;
+  }
+  :global(.rol-name) {
+    font-weight: 600;
+    color: var(--accent-color);
   }
 
 </style>
