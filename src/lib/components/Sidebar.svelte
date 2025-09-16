@@ -50,10 +50,12 @@
       <Icon name="users" size={24}/>
       <span class="nav-text">Usuarios</span>
     </button>
-		<button class:active={activeItem === 'test-modeler'} on:click={() => navigate('test-modeler')}>
+		<!--
+    <button class:active={activeItem === 'test-modeler'} on:click={() => navigate('test-modeler')}>
       <Icon name="network" size={24}/>
       <span class="nav-text">Test Modeler</span>
     </button>
+    -->
   </nav>
 
   <div class="sidebar-footer">
@@ -61,12 +63,16 @@
         <Icon name="log-out" size={24}/>
         <span class="nav-text">Cerrar Sesión</span>
     </button>
-
-    <button class="collapse-btn" on:click={sidebarStore.toggle} title={$sidebarStore ? 'Expandir menú' : 'Colapsar menú'}>
-      <Icon name={$sidebarStore ? 'chevron-right-circle' : 'chevron-left-circle'} size={24}/>
-      <span class="nav-text">Colapsar</span>
-    </button>
   </div>
+
+  <!-- Botón de colapsar/expandir - REPOSICIONADO -->
+  <button
+    class="collapse-btn"
+    on:click={sidebarStore.toggle}
+    title={$sidebarStore ? 'Expandir menú' : 'Colapsar menú'}
+  >
+      <Icon name={$sidebarStore ? 'chevron-right-circle' : 'chevron-left-circle'} size={24}/>
+    </button>
 </aside>
 
 <style>
@@ -79,6 +85,7 @@
     flex-direction: column;
     flex-shrink: 0;
     transition: width 0.3s ease;
+    position: relative; /* Añadido para posicionamiento absoluto del botón */
   }
 
   aside.collapsed {
@@ -123,7 +130,7 @@
     flex-grow: 1;
   }
 
-  nav button, .logout-btn, .collapse-btn {
+  nav button, .logout-btn {
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -139,7 +146,7 @@
     width: 100%;
     transition: background-color 0.2s, color 0.2s;
   }
-  nav button:hover, .logout-btn:hover, .collapse-btn:hover {
+  nav button:hover, .logout-btn:hover {
     background-color: rgba(255, 255, 255, 0.1);
     color: white;
   }
@@ -153,5 +160,24 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem; /* Espacio entre los botones del footer */
+  }
+  .collapse-btn {
+    position: absolute;
+    top: 2.8rem; /* Ajusta según el padding superior del aside */
+    right: -14px; /* Ajusta para que quede sobrepuesto */
+    background-color: var(--bg-sidebar); /* Fondo circular */
+    color: var(--text-sidebar); /* Color del icono */
+    border-radius: 50%; /* Forma circular */
+    width: 32px; /* Tamaño del círculo */
+    height: 32px; /* Tamaño del círculo */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Sombra */
+    z-index: 100; /* Asegura que esté encima */
+    transition: right 0.3s ease, transform 0.3s ease, background-color 0.2s, color 0.2s;
+    transform: translateY(-50%); /* Centra verticalmente */
+    padding:0px !important;
   }
 </style>
