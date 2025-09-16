@@ -6,7 +6,6 @@
 	import { taskDetailStore } from '$lib/stores/taskDetailStore';
 	import { processDetailStore } from '$lib/stores/processDetailStore';
 	import { processModelDetailStore } from '$lib/stores/processModelDetailStore';
-    import { userDetailStore } from '$lib/stores/userDetailStore'; // <-- Importar store
 	import { toast } from '$lib/stores/toast';
     import type { Task } from '$lib/types';
 
@@ -24,7 +23,6 @@
 	import TaskDetailPanel from '$lib/components/TaskDetailPanel.svelte';
 	import ProcessDetailView from '$lib/components/ProcessDetailView.svelte';
 	import ProcessModelDetailView from '$lib/components/ProcessModelDetailView.svelte';
-    import UserDetailPanel from '$lib/components/UserDetailPanel.svelte'; // <-- Importar panel
 	
 	let currentView = 'dashboard';
 
@@ -81,8 +79,4 @@
 	{#if $processModelDetailStore.isOpen}
 		<ProcessModelDetailView model={$processModelDetailStore.model} />
 	{/if}
-
-    {#if $userDetailStore.isOpen} <!-- NUEVO -->
-        <UserDetailPanel user={$userDetailStore.user} />
-    {/if}
 {/if}

@@ -1,3 +1,88 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+  Estilos de componentes globales para unificar la apariencia de la aplicación.
+*/
+@layer components {
+
+  /* Contenedor principal para tablas y contenido en formato de tarjeta */
+  .table-container {
+    @apply bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-colors;
+  }
+
+  /* Barra de herramientas de la tabla (contiene el buscador, etc.) */
+  .table-toolbar {
+    @apply mb-6;
+  }
+
+  /* Contenedor del Input de Búsqueda */
+  .search-container {
+    @apply relative max-w-sm;
+  }
+  .search-icon {
+    @apply absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400;
+  }
+  .search-input {
+    @apply block w-full pl-10 pr-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors;
+  }
+
+  /* Estilos de Tabla */
+  .data-table {
+    @apply min-w-full border-collapse;
+  }
+  .table-header {
+    @apply bg-gray-50 dark:bg-gray-700/50 transition-colors;
+  }
+  .data-table th {
+    @apply px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider;
+  }
+  .table-body {
+    @apply bg-white dark:bg-gray-800;
+  }
+  .table-row {
+    @apply border-t border-gray-200 dark:border-gray-700 transition-colors;
+  }
+  .table-row:hover {
+    @apply bg-gray-50 dark:bg-gray-700;
+  }
+  .data-table td {
+    @apply px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 align-middle;
+  }
+  .cell-primary {
+     @apply text-sm font-medium text-gray-900 dark:text-white;
+  }
+
+  /* Estilos de Usuario */
+  .user-info {
+    @apply flex items-center gap-4;
+  }
+  .user-avatar {
+    @apply h-10 w-10 rounded-full object-cover;
+  }
+  .text-secondary {
+    @apply text-sm text-gray-500 dark:text-gray-400;
+  }
+
+  /* Badges y Tags */
+  .role-badge, .tag {
+    @apply inline-flex px-2.5 py-0.5 text-xs font-semibold rounded-full;
+  }
+  .role-badge.admin { @apply bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200; }
+  .role-badge.user { @apply bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-200; }
+  .tag-list { @apply flex flex-wrap gap-2; }
+  .tag-color-0 { @apply bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200; }
+  .tag-color-1 { @apply bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200; }
+  .tag-color-2 { @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200; }
+  .tag-color-3 { @apply bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-200; }
+  .tag-color-4 { @apply bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200; }
+  
+  /* Botones */
+  .btn-edit {
+    @apply px-3 py-1 text-sm font-medium text-gray-600 dark:text-gray-300 bg-transparent border border-gray-300 dark:border-gray-600 rounded-md transition-colors;
+  }
+  .btn-edit:hover {
+    @apply bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white;
+  }
+}

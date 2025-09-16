@@ -10,14 +10,17 @@ export interface User {
     systemRole: 'admin' | 'user'; // Rol en la aplicación
     processRoles: string[]; // Array de keys de ProcessRole
     avatarUrl?: string;
+    status?: 'active' | 'pending'; // Estado para nuevas invitaciones
 }
 
 /**
  * NUEVO: Define la estructura para un Rol de Proceso.
+ * AJUSTE: Se añade el campo opcional de descripción.
  */
 export interface ProcessRole {
     key: string; // ej: 'project_manager'
     name: string; // ej: 'Gerente de Proyecto'
+    description?: string; // Descripción del rol
 }
   
 export interface ProcessInstance {

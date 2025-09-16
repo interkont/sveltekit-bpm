@@ -102,3 +102,35 @@ La solución fue configurar PostCSS explícitamente dentro del archivo `vite.con
     ```
 
 2.  **Limpieza y Estandarización**: Se eliminó el archivo `postcss.config.js` para evitar conflictos y se estandarizaron los archivos de configuración a la sintaxis CommonJS (`.cjs`) para asegurar la compatibilidad.
+
+---
+
+## 6. Módulo de Administración de Usuarios y Roles
+
+Se ha añadido una nueva vista de "Administración" accesible desde la navegación principal. Esta sección centraliza la gestión de la plataforma y utiliza una interfaz moderna basada en pestañas y paneles deslizantes para una experiencia de usuario fluida.
+
+- **Componente Central:** `src/lib/components/UserManagementView.svelte`.
+- **Arquitectura de Paneles:** La creación y edición de usuarios/roles se realiza a través de paneles (`UserEditPanel`, `RoleEditPanel`, `AddMemberPanel`) que se deslizan desde el lateral, evitando la recarga de la página y manteniendo el contexto.
+- **Gestión de Estado Reactiva:** El estado de los usuarios y roles se gestiona a través de Svelte Stores (`userStore`, `processRoleStore`), asegurando que la interfaz se actualice automáticamente cuando los datos cambian.
+
+### A. Gestión de Usuarios
+- Muestra una tabla de usuarios con búsqueda en tiempo real.
+- Permite la creación y edición de usuarios, incluyendo la asignación de roles de sistema y de proceso.
+
+### B. Gestión de Roles
+- Muestra una lista de los roles de proceso existentes y el número de miembros en cada uno.
+- Permite la creación/edición de roles y la asignación/eliminación de miembros de un rol.
+
+---
+
+## 7. Depuración de Código (Refactorización)
+
+Se realizó una sesión de limpieza de código para eliminar componentes y lógica que se habían vuelto obsoletos tras la implementación del nuevo módulo de administración.
+
+- **Objetivo:** Centralizar la lógica de edición de usuarios y eliminar redundancias.
+- **Archivos Eliminados:**
+  - `src/lib/stores/userDetailStore.ts`: Store para un panel de detalles que fue reemplazado.
+  - `src/lib/components/UserDetailPanel.svelte`: Componente de panel obsoleto.
+- **Limpieza Adicional:**
+  - Se eliminaron las referencias a los archivos borrados en `src/routes/+page.svelte`.
+  - Se refactorizó `UserManagementView.svelte` para obtener los nombres de los roles de forma reactiva desde `processRoleStore`, eliminando una variable estática propensa a errores.
