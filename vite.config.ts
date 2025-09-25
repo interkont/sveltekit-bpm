@@ -7,6 +7,7 @@ import autoprefixer from 'autoprefixer';
 export default defineConfig({
   plugins: [sveltekit()],
   css: {
+    // Configure PostCSS with Tailwind CSS and Autoprefixer
     postcss: {
       plugins: [
         tailwindcss({ config: './tailwind.config.cjs' }),

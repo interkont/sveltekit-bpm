@@ -134,3 +134,49 @@ Se realizó una sesión de limpieza de código para eliminar componentes y lógi
 - **Limpieza Adicional:**
   - Se eliminaron las referencias a los archivos borrados en `src/routes/+page.svelte`.
   - Se refactorizó `UserManagementView.svelte` para obtener los nombres de los roles de forma reactiva desde `processRoleStore`, eliminando una variable estática propensa a errores.
+
+---
+
+## 8. Análisis y Alistamiento para Integración Backend
+
+Se ha realizado un análisis de la estructura de datos actual en el prototipo para evaluar su preparación para la integración con un backend. La estructura de los datos locales simula la forma en que se espera recibir los datos de las APIs backend para iniciar la integración.
+
+### Análisis de Estructuras de Datos
+
+- **`/src/lib/data/users.ts`**:
+  - **Estructura:** Array de objetos `User` con propiedades `uid` (string), `displayName` (string), `email` (string), `systemRole` (string), `processRoles` (string[]), y `avatarUrl` (string).
+  - **Identificadores:** Utiliza `uid` como identificador único, que es adecuado para mapear a IDs de backend.
+  - **Relaciones:** Define la relación usuario-rol de proceso a través de un array de strings (`processRoles`).
+  - **Preparación:** La estructura es clara y utiliza IDs únicos, lo que facilita la adaptación para consumir datos de un endpoint de usuarios.
+
+- **`/src/lib/data/processModels.ts`**:
+  - **Estructura:** Array de objetos con propiedades `id` (string), `name` (string), `description` (string), `version` (string), `lastModified` (string), y `bpmnXml` (string).
+  - **Identificadores:** Utiliza `id` como identificador único para los modelos, adecuado para referenciar recursos de backend.
+  - **Relaciones:** Centrado en los metadatos y el contenido XML del modelo; no define explícitamente relaciones con otras entidades fuera del modelo BPMN.
+  - **Preparación:** La estructura es simple y utiliza IDs únicos. El principal punto a considerar es el manejo del `bpmnXml`, que puede ser grande.
+
+- **`/src/lib/data/process-roles.ts`**:
+  - **Estructura:** Array de objetos `ProcessRole` con propiedades `key` (string), `name` (string), y `description` (string).
+  - **Identificadores:** Utiliza `key` como identificador, que puede mapearse a IDs de backend si es necesario.
+  - **Relaciones:** Define la lista de roles disponibles, pero la asignación de roles a usuarios se maneja en `/src/lib/data/users.ts`.
+  - **Preparación:** La estructura es sencilla y funcional para obtener una lista de roles.
+
+**Conclusión del Análisis:**
+
+La estructura de datos actual en el prototipo es un buen punto de partida para la integración backend. La mayoría de las entidades utilizan identificadores únicos y la separación de datos en archivos dedicados (`/src/lib/data/`) facilita su adaptación.
+
+### 8.1 Modificaciones Propuestas al Prototipo
+
+Para validar el alistamiento del frontend y prepararlo mejor para interactuar con un backend real, se proponen las siguientes modificaciones al prototipo:
+
+1.  **Crear Servicios de Datos Simulados con Latencia y Manejo de Errores:**
+    - **Objetivo:** Reemplazar el acceso directo a los arrays de datos locales en `/src/lib/data/` por funciones asíncronas que simulen llamadas a una API.
+    - **Implementación:** Estas funciones introducirán retardos artificiales (simulando latencia de red) y, ocasionalmente, devolverán errores para permitir probar el manejo de estados de carga y error en la interfaz de usuario.
+    - **Impacto:** Obligará a los componentes a manejar estados `loading` y `error` al obtener datos, mejorando la resiliencia del frontend.
+
+2.  **Refactorizar la Carga de Modelos de Proceso para Carga a Demanda del XML:**
+    - **Objetivo:** Optimizar la carga inicial de la lista de modelos de proceso y simular un escenario de backend donde el XML se obtiene por separado.
+    - **Implementación:** Modificar la lógica para que el "servicio" simulado que lista los modelos de proceso devuelva solo los metadatos (sin `bpmnXml`). Crear una nueva función en el servicio simulado para "obtener modelo por ID", que incluya el `bpmnXml` y simule una llamada separada.
+    - **Impacto:** La vista de lista de modelos será más rápida. La vista de detalle/editor de modelos deberá invocar la nueva función para cargar el XML completo solo cuando se necesite.
+
+Estas modificaciones no cambian la estructura de datos esperada en el frontend, sino la forma en que se obtienen y manejan, alineándola más con la interacción con un sistema distribuido (backend). Una vez implementadas y validadas, servirán como base sólida para definir los requerimientos funcionales y técnicos del backend.

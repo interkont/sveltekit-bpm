@@ -101,6 +101,28 @@ export interface SlowProcess {
       duration: string;
       bottleneck: string;
 }
+
+/**
+ * NUEVO: Define la estructura para un modelo en la lista de "Modelos Recientes".
+ * Usado en: DashboardView.svelte
+ */
+export interface RecentModel {
+  id: string;
+  name: string;
+  lastModified: string;
+  editor: string;
+}
+
+/**
+ * NUEVO: Define la estructura para una tarea en la lista "Mis Tareas Pendientes".
+ * Usado en: DashboardView.svelte
+ */
+export interface UserTask {
+  id: string;
+  name: string;
+  process: string;
+  dueDate: string;
+}
   
 /**
  * Define la configuración para mostrar el modal de confirmación.

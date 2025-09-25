@@ -3,16 +3,15 @@
   import SimpleBarChart from '$lib/components/SimpleBarChart.svelte';
   import DonutChart from '$lib/components/DonutChart.svelte';
   
-  // --- AJUSTE: Importamos todas las 'interfaces' que usaremos para tipar nuestros datos ---
   import type { 
     StatCard, 
     ChartDataItem, 
     DonutChartSegment, 
     ActivityItem, 
-    SlowProcess 
+    SlowProcess,
+    RecentModel,
+    UserTask
   } from '$lib/types';
-
-  // --- AJUSTE: Aplicamos el tipo correspondiente a cada array de datos ---
 
   const stats: StatCard[] = [
     { value: 76, label: 'Tareas Pendientes', icon: 'list', color: 'blue' },
@@ -53,12 +52,37 @@
     { id: 'PROC-102', name: 'Desarrollo Nuevo Módulo', duration: '9 días', bottleneck: 'Aprobación Gerencia' },
     { id: 'PROC-076', name: 'Campaña Marketing Invierno', duration: '8 días', bottleneck: 'Diseño Gráfico' },
   ];
+
+  const recentModels: RecentModel[] = [
+    { id: 'MDL-001', name: 'Proceso de Onboarding de Clientes', lastModified: 'hace 2 horas', editor: 'Elena Valdés' },
+    { id: 'MDL-002', name: 'Gestión de Reclamaciones', lastModified: 'ayer', editor: 'Marcos Gil' },
+    { id: 'MDL-003', name: 'Logística de Envíos Internacionales', lastModified: 'hace 3 días', editor: 'Sofía Costa' }
+  ];
+
+  const myTasks: UserTask[] = [
+    { id: 'TSK-501', name: 'Revisar propuesta de nuevo proveedor', process: 'Adquisiciones', dueDate: '2024-07-28' },
+    { id: 'TSK-502', name: 'Aprobar solicitud de vacaciones', process: 'Recursos Humanos', dueDate: '2024-07-29' },
+    { id: 'TSK-503', name: 'Validar informe financiero Q2', process: 'Finanzas', dueDate: '2024-08-01' }
+  ];
+  
+  const teamPerformance: DonutChartSegment[] = [
+    { label: 'Soporte N1', value: 68, color: '#63b3ed' },
+    { label: 'Desarrollo', value: 45, color: '#a3bffa' },
+    { label: 'Calidad', value: 22, color: '#e9d8fd' },
+  ];
+
+  const instanceStatus = [
+    { status: 'En Progreso', count: 45, color: 'blue' },
+    { status: 'Completado', count: 102, color: 'green' },
+    { status: 'Suspendido', count: 8, color: 'yellow' },
+    { status: 'Cancelado', count: 3, color: 'red' }
+  ];
+
 </script>
 
 <div class="dashboard">
   <h1 class="dashboard-title">Dashboard General</h1>
   
-  <!-- Stat Cards -->
   <div class="stats-grid">
     {#each stats as stat}
       <div class="stat-card stat-card--{stat.color}">
@@ -73,22 +97,37 @@
     {/each}
   </div>
 
-  <!-- Main Grid for Charts and Tables -->
+  <!-- AJUSTE: Reorganización del grid para un layout más lógico y equilibrado -->
   <div class="main-grid">
-    <!-- CAMBIO: El gráfico de barras ahora es de tamaño 'medium' -->
+    
+    <!-- Fila 1: Gráficos Principales -->
     <div class="grid-item medium">
       <SimpleBarChart data={processData} title="Instancias (últimos 6 meses)"/>
     </div>
-    
     <div class="grid-item medium">
        <DonutChart data={performanceData} title="Tareas por Equipo"/>
     </div>
-
-    <!-- NUEVO: Otro gráfico de barras para los procesos más solicitados -->
     <div class="grid-item medium">
       <SimpleBarChart data={topProcessesData} title="Procesos Más Solicitados"/>
     </div>
-
+    
+    <!-- Fila 2: Tareas Personales y Actividad -->
+    <div class="grid-item large">
+      <div class="content-box">
+        <h4>Mis Tareas Pendientes</h4>
+        <ul class="simple-list">
+          {#each myTasks as task}
+            <li>
+              <Icon name="check-circle" size={20} class="text-green-500"/>
+              <div class="list-item-details">
+                <p class="item-title">{task.name}</p>
+                <p class="item-subtitle">Proceso: {task.process} | Vence: {task.dueDate}</p>
+              </div>
+            </li>
+          {/each}
+        </ul>
+      </div>
+    </div>
     <div class="grid-item medium">
       <div class="activity-feed">
         <h4>Actividad Reciente</h4>
@@ -107,6 +146,8 @@
         </ul>
       </div>
     </div>
+
+    <!-- Fila 3: Procesos y Modelos -->
     <div class="grid-item large">
         <div class="slow-processes-table">
             <h4>Procesos con Mayor Duración</h4>
@@ -132,10 +173,45 @@
             </table>
         </div>
     </div>
+    <div class="grid-item medium">
+        <div class="content-box">
+            <h4>Modelos de Proceso Recientes</h4>
+            <ul class="simple-list">
+                {#each recentModels as model}
+                    <li>
+                        <Icon name="file-text" size={20} class="text-blue-500" />
+                        <div class="list-item-details">
+                            <p class="item-title">{model.name}</p>
+                            <p class="item-subtitle">Modificado por {model.editor} - {model.lastModified}</p>
+                        </div>
+                    </li>
+                {/each}
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Fila 4: Rendimiento y Estados -->
+    <div class="grid-item medium">
+        <DonutChart data={teamPerformance} title="Rendimiento del Equipo (Tareas Resueltas)" />
+    </div>
+    <div class="grid-item medium">
+      <div class="content-box">
+        <h4>Estado de Instancias de Procesos</h4>
+        <ul class="status-list">
+          {#each instanceStatus as item}
+            <li class="status-item status-{item.color}">
+              <span class="status-label">{item.status}</span>
+              <span class="status-count">{item.count}</span>
+            </li>
+          {/each}
+        </ul>
+      </div>
+    </div>
   </div>
 </div>
 
 <style>
+/* --- ESTILOS GENERALES Y NUEVOS --- */
 .dashboard {
   display: flex;
   flex-direction: column;
@@ -146,8 +222,6 @@
   font-weight: 700;
   color: var(--text-primary);
 }
-
-/* Stat Cards */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -167,7 +241,6 @@
 .stat-card--green { border-color: #48bb78; }
 .stat-card--red { border-color: #f56565; }
 .stat-card--yellow { border-color: #f6e05e; }
-
 .stat-icon {
   flex-shrink: 0;
   width: 50px;
@@ -181,22 +254,103 @@
 .stat-card--green .stat-icon { background-color: #f0fff4; color: #48bb78; }
 .stat-card--red .stat-icon { background-color: #fff5f5; color: #f56565; }
 .stat-card--yellow .stat-icon { background-color: #fffbeb; color: #f6e05e; }
-
 .stat-info { display: flex; flex-direction: column; }
 .stat-value { font-size: 1.75rem; font-weight: 700; color: var(--text-primary); }
 .stat-label { font-size: 0.9rem; color: var(--text-secondary); }
-
-/* Main Grid */
 .main-grid {
   display: grid;
+  /* AJUSTE: Se define explícitamente un grid de 3 columnas */
   grid-template-columns: repeat(3, 1fr);
   grid-auto-rows: minmax(300px, auto);
   gap: 1.5rem;
 }
-.grid-item.large { grid-column: span 2; }
-.grid-item.medium { grid-column: span 1; }
-
-/* Activity Feed */
+/* AJUSTE: Se asegura que los elementos 'large' ocupen 2 columnas */
+.grid-item.large { 
+  grid-column: span 2; 
+}
+/* AJUSTE: Se asegura que los elementos 'medium' ocupen 1 columna */
+.grid-item.medium { 
+  grid-column: span 1; 
+}
+.content-box {
+  background-color: var(--bg-secondary);
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.content-box h4 {
+  margin: 0 0 1.5rem 0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+}
+.simple-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.simple-list li {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.list-item-details .item-title {
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0;
+}
+.list-item-details .item-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+.status-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+.status-item:last-child {
+  border-bottom: none;
+}
+.status-label {
+  position: relative;
+  padding-left: 1rem;
+  color: var(--text-primary);
+}
+.status-label::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.status-blue .status-label::before { background-color: #4299e1; }
+.status-green .status-label::before { background-color: #48bb78; }
+.status-yellow .status-label::before { background-color: #f6e05e; }
+.status-red .status-label::before { background-color: #f56565; }
+.status-count {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
 .activity-feed {
   background-color: var(--bg-secondary);
   padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
@@ -213,8 +367,6 @@
 .activity-details p { margin: 0 0 0.25rem 0; font-size: 0.9rem; }
 .activity-details em { color: var(--accent-color); font-style: normal; }
 .activity-details span { font-size: 0.8rem; color: var(--text-secondary); }
-
-/* Slow Processes Table */
 .slow-processes-table {
   background-color: var(--bg-secondary);
   padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
