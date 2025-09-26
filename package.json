@@ -14,8 +14,10 @@
 		"lint": "prettier --check . && eslint ."
 	},
 	"dependencies": {
+		"@firebase/app-check": "^0.11.0",
 		"bpmn-js": "11.5.0",
-		"bpmn-js-properties-panel": "3.0.0"
+		"bpmn-js-properties-panel": "3.0.0",
+		"firebase": "^12.3.0"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",

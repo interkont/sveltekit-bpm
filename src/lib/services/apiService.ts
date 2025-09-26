@@ -1,48 +1,79 @@
+// Correctly import public environment variables for SvelteKit
 import { PUBLIC_API_BASE_URL } from '$env/static/public';
 
-class ApiService {
-  private baseUrl: string;
+// This will hold the JWT token for when we switch to JWT-based auth.
+let authToken: string | null = null;
 
-  constructor() {
-    // Use the environment variable defined in .env files
-    // PUBLIC_ prefix is required for client-side environment variables in SvelteKit
-    this.baseUrl = PUBLIC_API_BASE_URL;
+// Function to set the authentication token for subsequent requests
+export const setAuthToken = (token: string | null) => {
+  authToken = token;
+};
+
+// A helper function to handle fetch responses and parse JSON
+const handleResponse = async <T>(response: Response): Promise<T> => {
+  if (response.ok) {
+    const text = await response.text();
+    return text ? JSON.parse(text) : ({} as T);
+  } else {
+    const errorBody = await response.json().catch(() => ({
+      message: `HTTP error! Status: ${response.status} ${response.statusText}`,
+    }));
+    throw new Error(errorBody.message || 'An unknown error occurred');
+  }
+};
+
+// Generic request function that handles headers, methods, and body
+const request = async <T>(
+  method: string,
+  endpoint: string,
+  body: object | null = null,
+): Promise<T> => {
+  if (!PUBLIC_API_BASE_URL) {
+    throw new Error("PUBLIC_API_BASE_URL is not defined in your .env file.");
+  }
+  
+  const url = `${PUBLIC_API_BASE_URL}${endpoint}`;
+  
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  // If a JWT token exists, add it.
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
   }
 
-  async get<T>(endpoint: string): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return await response.json() as T;
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      throw error;
-    }
+  const options: RequestInit = {
+    method,
+    headers,
+  };
+
+  if (body) {
+    options.body = JSON.stringify(body);
   }
 
-  // Add other methods like post, put, delete as needed
-  // async post<T>(endpoint: string, data: any): Promise<T> {
-  //   const url = `${this.baseUrl}${endpoint}`;
-  //   try {
-  //     const response = await fetch(url, {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify(data),
-  //     });
-  //     if (!response.ok) {
-  //       throw new Error(`HTTP error! status: ${response.status}`);
-  //     }
-  //     return await response.json() as T;
-  //   } catch (error) {
-  //     console.error('Error posting data:', error);
-  //     throw error;
-  //   }
-  // }
-}
+  try {
+    const response = await fetch(url, options);
+    return await handleResponse<T>(response);
+  } catch (error) {
+    console.error(`${method} request to ${endpoint} failed:`, error);
+    throw error;
+  }
+};
 
-export const apiService = new ApiService();
+// Exported convenience methods for each HTTP verb
+export const get = <T>(endpoint: string): Promise<T> => {
+  return request<T>('GET', endpoint);
+};
+
+export const post = <T>(endpoint: string, body: object): Promise<T> => {
+  return request<T>('POST', endpoint, body);
+};
+
+export const put = <T>(endpoint: string, body: object): Promise<T> => {
+  return request<T>('PUT', endpoint, body);
+};
+
+export const del = <T>(endpoint: string): Promise<T> => {
+  return request<T>('DELETE', endpoint);
+};

@@ -8,6 +8,7 @@
 	import { onMount } from 'svelte';
 	import { theme } from '$lib/stores/theme';
 	import { authStore } from '$lib/stores/authStore';
+	import { authService } from '$lib/services/authService';
 
 	// Componentes de Layout Global
 	import Sidebar from '$lib/components/Sidebar.svelte';
@@ -23,7 +24,7 @@
 
 	onMount(() => {
 		theme.init();
-		authStore.init();
+		authService.initializeAuth();
 	});
 
 	function handleConfirm() {
@@ -50,7 +51,7 @@
 </svelte:head>
 
 <div class="app-container">
-	{#if $authStore.isAuthenticated}
+	{#if $authStore.token}
 		<div class="main-layout">
 			<Sidebar></Sidebar>
 			<div class="content-wrapper">
@@ -105,7 +106,6 @@
 		--text-sidebar: #9ca3af;
 		--text-sidebar-active: #ffffff;
 		--border-color: #4b5563;
-		--accent-color: #6366f1;
 	}
 
 	:global(body) {

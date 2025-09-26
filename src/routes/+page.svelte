@@ -47,7 +47,7 @@
     }
 </script>
 
-{#if !$authStore.isAuthenticated}
+{#if !$authStore.token}
 	<LoginView />
 {:else}
 	<!-- Router principal basado en el Hash de la URL -->

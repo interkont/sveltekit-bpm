@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { authStore } from '$lib/stores/authStore';
+    import { goto } from '$app/navigation';
+    import { authService } from '$lib/services/authService';
     import Icon from '$lib/components/Icon.svelte';
   
-    // --- AJUSTE: Se actualiza el email pre-llenado para usar las credenciales funcionales ---
-    let email: string = 'ana.garcia@example.com';
-    let password: string = 'password123';
+    let email: string = 'admin@flowify.com';
+    let password: string = 'admin123';
     let errorMessage: string = '';
     let isLoading: boolean = false;
   
@@ -12,7 +12,9 @@
       isLoading = true;
       errorMessage = '';
       try {
-        await authStore.login(email, password);
+        await authService.login({ email, password });
+        // On successful login, navigate to the dashboard/home page
+        goto('/');
       } catch (e) {
         if (e instanceof Error) {
           errorMessage = e.message;
