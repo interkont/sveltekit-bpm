@@ -1,25 +1,44 @@
 import { writable } from 'svelte/store';
-// --- AJUSTE: Importamos la 'interface' para una instancia de proceso ---
 import type { ProcessInstance } from '$lib/types';
+import { processInstanceService } from '$lib/services/processInstanceService';
 
-// --- AJUSTE: Se crea una 'interface' para describir la forma del estado del store ---
 interface ProcessDetailState {
   isOpen: boolean;
   process: ProcessInstance | null;
+  loading: boolean;
+  error: string | null;
 }
 
-// --- Estado Inicial, ahora tipado con nuestra nueva 'interface' ---
 const initialState: ProcessDetailState = {
   isOpen: false,
   process: null,
+  loading: false,
+  error: null,
 };
 
-// --- AJUSTE: Le decimos al store que siempre manejará un estado de tipo 'ProcessDetailState' ---
-const { subscribe, set } = writable<ProcessDetailState>(initialState);
+const createProcessDetailStore = () => {
+  const { subscribe, set, update } = writable<ProcessDetailState>(initialState);
 
-export const processDetailStore = {
-  subscribe,
-  // --- AJUSTE: Se tipa el parámetro de la función 'show' ---
-  show: (processData: ProcessInstance) => set({ isOpen: true, process: processData }),
-  hide: () => set(initialState),
+  const show = async (instanceId: number) => {
+    update(state => ({ ...state, isOpen: true, loading: true, error: null, process: null }));
+    try {
+      const processData = await processInstanceService.getInstanceDetails(instanceId);
+      set({ isOpen: true, loading: false, error: null, process: processData });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'An unknown error occurred';
+      set({ isOpen: true, loading: false, error: message, process: null });
+    }
+  };
+
+  const hide = () => {
+    set(initialState);
+  };
+
+  return {
+    subscribe,
+    show,
+    hide,
+  };
 };
+
+export const processDetailStore = createProcessDetailStore();

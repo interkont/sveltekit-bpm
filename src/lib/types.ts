@@ -1,42 +1,79 @@
 // --- Tipos de Datos Principales (Nombres) ---
 
-/**
- * AJUSTE: Se modifica la interfaz de Usuario para separar roles de sistema y de proceso.
- */
 export interface User {
-    uid: string; // Identificador único, proveniente de Firebase Auth
-    displayName: string;
+    id: number;
+    uid?: string;
+    fullName: string;
     email: string;
-    systemRole: 'admin' | 'user'; // Rol en la aplicación
-    processRoles: string[]; // Array de keys de ProcessRole
+    roleId?: number;
+    systemRole?: 'admin' | 'user'; 
+    processRoles?: string[];
     avatarUrl?: string;
-    status?: 'active' | 'pending'; // Estado para nuevas invitaciones
+    status?: 'ACTIVE' | 'PENDING';
 }
 
-/**
- * NUEVO: Define la estructura para un Rol de Proceso.
- * AJUSTE: Se añade el campo opcional de descripción.
- */
 export interface ProcessRole {
-    key: string; // ej: 'project_manager'
-    name: string; // ej: 'Gerente de Proyecto'
-    description?: string; // Descripción del rol
+    key: string; 
+    name: string;
+    description?: string;
+}
+
+// Sub-interfaz para una TaskInstance dentro de la respuesta del Proceso
+export interface ProcessTaskInstance {
+    id: number;
+    status: string;
+    completionTime: string | null;
+    createdAt: string;
+    comments: string | null;
+    completionPayload: {
+        comments?: string;
+    };
+    processElement: {
+        name: string;
+    };
+    completedByUser: {
+        fullName: string;
+    } | null;
 }
   
+/**
+ * Define la estructura detallada de una Instancia de Proceso, como la devuelve la API.
+ */
 export interface ProcessInstance {
-    id: string;
-    processName: string;
-    initiator: string;
-    creationDate: string;
+    id: number;
+    processDefId: number;
+    description: string;
     status: string;
+    businessData: Record<string, any>;
+    startedByUserId: number;
+    startTime: string;
+    endTime: string | null;
+    processDefinition: {
+        id: number;
+        businessProcessKey: string;
+        name: string;
+        description: string;
+        version: number;
+        status: string;
+        bpmnProcessId: string;
+    };
+    startedByUser: {
+        id: number;
+        fullName: string;
+        email: string;
+    };
+    taskInstances: ProcessTaskInstance[];
 }
 
+// Tarea principal para la lista / bandeja de entrada
 export interface Task {
-    id: string;
-    processName: string;
+    taskId: number;
     taskName: string;
-    // Añadimos el objeto de proceso completo que ya usábamos en los datos de maqueta
-    process: ProcessInstance;
+    processInstanceId: number;
+    processName: string;
+    processStartedBy: string;
+    createdAt: string;
+    dueDate: string | null;
 }
   
 export interface ProcessModel {
@@ -47,163 +84,24 @@ export interface ProcessModel {
     bpmnXml: string;
 }
   
+// --- (El resto de los tipos de UI se mantienen igual) ---
   
-// --- Tipos de Datos para Componentes de UI y Stores ---
-  
-/**
- * Define la estructura de una tarjeta de estadística en el Dashboard.
- * Usado en: DashboardView.svelte
- */
-export interface StatCard {
-    value: number | string;
-    label: string;
-    icon: string;
-    color: 'blue' | 'green' | 'red' | 'yellow';
-}
-  
-/**
- * Define la estructura de un punto de datos para los gráficos de barras.
- * Usado en: DashboardView.svelte, SimpleBarChart.svelte
- */
-export interface ChartDataItem {
-    label: string;
-    value: number;
-}
-  
-/**
- * Define la estructura de un segmento para el gráfico de dona.
- * Usado en: DashboardView.svelte, DonutChart.svelte
- */
-export interface DonutChartSegment {
-    label: string;
-    value: number;
-    color: string;
-}
-  
-/**
- * Define la estructura de un item en el feed de actividad reciente.
- * Usado en: DashboardView.svelte
- */
-export interface ActivityItem {
-    user: string;
-    action: string;
-    task: string;
-    time: string;
-}
-  
-/**
- * Define la estructura de los datos para la tabla de procesos lentos.
- * Usado en: DashboardView.svelte
- */
-export interface SlowProcess {
-      id: string;
-      name: string;
-      duration: string;
-      bottleneck: string;
-}
-
-/**
- * NUEVO: Define la estructura para un modelo en la lista de "Modelos Recientes".
- * Usado en: DashboardView.svelte
- */
-export interface RecentModel {
-  id: string;
-  name: string;
-  lastModified: string;
-  editor: string;
-}
-
-/**
- * NUEVO: Define la estructura para una tarea en la lista "Mis Tareas Pendientes".
- * Usado en: DashboardView.svelte
- */
-export interface UserTask {
-  id: string;
-  name: string;
-  process: string;
-  dueDate: string;
-}
-  
-/**
- * Define la configuración para mostrar el modal de confirmación.
- * Usado en: modal.ts, App.svelte (ahora +layout.svelte)
- */
-export interface ModalConfig {
-    title: string;
-    message: string;
-    onConfirm: () => void;
-}
-  
-/**
- * Define la estructura de una notificación Toast.
- * Usado en: toast.ts, Toast.svelte
- */
-export interface ToastNotification {
-    id: number;
-    message: string;
-    type: 'success' | 'error';
-    duration?: number;
-}
-
-// --- Tipos para ProcessDetailView ---
-
-export interface GeneralInfoItem {
-  label: string;
-  value: string;
-  icon: string;
-}
-
-export interface BusinessDataItem {
-  label: string;
-  value: string;
-}
-
+export interface StatCard { value: number | string; label: string; icon: string; color: 'blue' | 'green' | 'red' | 'yellow'; }
+export interface ChartDataItem { label: string; value: number; }
+export interface DonutChartSegment { label: string; value: number; color: string; }
+export interface ActivityItem { user: string; action: string; task: string; time: string; }
+export interface SlowProcess { id: string; name: string; duration: string; bottleneck: string; }
+export interface RecentModel { id: string; name: string; lastModified: string; editor: string; }
+export interface UserTask { id: string; name: string; process: string; dueDate: string; }
+export interface ModalConfig { title: string; message: string; onConfirm: () => void; }
+export interface ToastNotification { id: number; message: string; type: 'success' | 'error'; duration?: number; }
+export interface GeneralInfoItem { label: string; value: string; icon: string; }
+export interface BusinessDataItem { label: string; value: string; }
 export type TimelineStatus = 'COMPLETED' | 'IN_PROGRESS' | 'PENDING';
-
-export interface TimelineStep {
-  taskName: string;
-  status: TimelineStatus;
-  user: string;
-  date: string | null;
-}
-
-export interface Comment {
-  user: string;
-  text: string;
-  date: string;
-  avatar: string;
-}
-
-export interface DocumentFile {
-  name: string;
-  type: 'pdf' | 'doc' | string;
-  date: string;
-  user: string;
-}
-
-export interface DocumentGroup {
-  taskName: string;
-  files: DocumentFile[];
-}
-
-export interface ProcessMockData {
-  generalInfo: GeneralInfoItem[];
-  businessData: BusinessDataItem[];
-  timeline: TimelineStep[];
-  comments: Comment[];
-  documents: DocumentGroup[];
-}
-
-export interface PreviousTaskContext {
-  name: string;
-  user: string;
-  comment: string;
-}
-
-// --- AJUSTE: Se mantiene la interfaz anterior para el tipo de tarjeta de proceso ---
-export interface ProcessTypeCard {
-    key: string;
-    name: string;
-    description: string;
-    icon: string;
-}
+export interface TimelineStep { taskName: string; status: TimelineStatus; user: string; date: string | null; }
+export interface Comment { user: string; text: string; date: string; avatar: string; }
+export interface DocumentFile { name: string; type: 'pdf' | 'doc' | string; date: string; user: string; }
+export interface DocumentGroup { taskName: string; files: DocumentFile[]; }
+export interface ProcessMockData { generalInfo: GeneralInfoItem[]; businessData: BusinessDataItem[]; timeline: TimelineStep[]; comments: Comment[]; documents: DocumentGroup[]; }
+export interface PreviousTaskContext { name: string; user: string; comment: string; }
+export interface ProcessTypeCard { key: string; name: string; description: string; icon: string; }

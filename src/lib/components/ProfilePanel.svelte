@@ -5,41 +5,28 @@
   import { profilePanelStore } from '$lib/stores/profilePanelStore';
   import Icon from '$lib/components/Icon.svelte';
   import { authStore } from '$lib/stores/authStore';
-  import { userStore } from '$lib/stores/userStore';
+  import { authService } from '$lib/services/authService';
   import { processRoleStore } from '$lib/stores/processRoleStore';
-  import type { User, ProcessRole } from '$lib/types';
+  import type { ProcessRole } from '$lib/types';
 
   const dispatch = createEventDispatcher<{
     submit: { name: string; email: string };
   }>();
 
   // Estado local para el formulario y la información del usuario
-  let formData = { name: '', email: '' };
+  let formData = { 
+    name: $authStore.user?.fullName || '', 
+    email: $authStore.user?.email || '' 
+  };
   let currentPassword = '';
   let newPassword = '';
   let confirmPassword = '';
-  let currentUser: User | undefined;
   let processRoles: ProcessRole[] = [];
 
   // Suscribirse a los roles de proceso para obtener sus nombres
   processRoleStore.subscribe(value => {
     processRoles = value;
   });
-
-  // Bloque reactivo para sincronizar datos al abrir el panel
-  $: if ($authStore.user?.uid && $profilePanelStore) {
-    currentUser = $userStore.find(u => u.uid === $authStore.user.uid);
-    if (currentUser) {
-      formData = {
-        name: currentUser.displayName,
-        email: currentUser.email,
-      };
-    }
-    // Reiniciar campos de contraseña al abrir
-    currentPassword = '';
-    newPassword = '';
-    confirmPassword = '';
-  }
 
   // Tailwind classes for process role tags
   const tagColors = [
@@ -62,12 +49,12 @@
   }
 
   function handleLogout() {
-    authStore.logout();
+    authService.logout();
     profilePanelStore.set(false);
   }
 </script>
 
-{#if $profilePanelStore && currentUser}
+{#if $profilePanelStore && $authStore.user}
   <div class="panel-backdrop" on:click={() => profilePanelStore.set(false)}></div>
   
   <aside class="detail-panel profile-panel" transition:slide={{ duration: 400, easing: quintOut, axis: 'x' }}>
@@ -87,10 +74,10 @@
         <div class="form-section">
           <h3>Información Personal</h3>
           <div class="avatar-section">
-            <img src={currentUser.avatarUrl} alt="Avatar de {currentUser.displayName}" class="avatar-img"/>
+            <img src={$authStore.user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent($authStore.user.fullName)}&background=random`} alt="Avatar de {$authStore.user.fullName}" class="avatar-img"/>
             <div class="avatar-actions">
-                <p>{currentUser.displayName}</p>
-                <span>{currentUser.email}</span>
+                <p>{$authStore.user.fullName}</p>
+                <span>{$authStore.user.email}</span>
                 <button class="upload-btn">
                     <Icon name="upload-cloud" size={16}/> Cambiar Foto
                 </button>
@@ -124,18 +111,23 @@
         </div>
       </div>
       
-      <!-- === NUEVA SECCIÓN DE ROLES === -->
+      <!-- === SECCIÓN DE ROLES AJUSTADA === -->
       <div class="form-section">
         <h3>Tus Roles</h3>
         <div class="form-field">
             <label>Rol de Sistema</label>
-            <span class="px-2 py-px text-xs font-semibold rounded-full uppercase {currentUser.systemRole === 'admin' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100' : 'bg-purple-100 text-purple-800 dark:bg-purple-700 dark:text-purple-300'}">{currentUser.systemRole}</span>
+            <!-- Nota: La respuesta del login no incluye el nombre del rol, solo el roleId.
+                 Para mostrar el nombre, necesitaríamos un store de roles o que la API lo devuelva.
+                 Por ahora, mostramos el ID o un nombre genérico. -->
+            <span class="px-2 py-px text-xs font-semibold rounded-full uppercase {$authStore.user.roleId === 1 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100' : 'bg-purple-100 text-purple-800 dark:bg-purple-700 dark:text-purple-300'}">
+              {$authStore.user.roleId === 1 ? 'Admin' : 'User'}
+            </span>
         </div>
         <div class="form-field">
             <label>Roles de Proceso</label>
-            {#if currentUser.processRoles && currentUser.processRoles.length > 0}
+            {#if $authStore.user.processRoles && $authStore.user.processRoles.length > 0}
                 <div class="role-badge-group">
-                    {#each currentUser.processRoles as roleKey}
+                    {#each $authStore.user.processRoles as roleKey}
                         <span class="px-2 py-px text-xs font-semibold rounded-full uppercase bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-300">{getRoleName(roleKey)}</span>
                     {/each}
                 </div>

@@ -1,24 +1,70 @@
 import { writable } from 'svelte/store';
-import type { Task } from '$lib/types';
+import type { Task, ProcessInstance } from '$lib/types';
+import { processInstanceService } from '$lib/services/processInstanceService';
 
-// 2. Definimos la "forma" que tendrá el estado de este store
 interface TaskDetailState {
   isOpen: boolean;
-  task: Task | null; // El estado 'task' debe ser un objeto 'Task' o nulo
+  task: Task | null;
+  processInstance: ProcessInstance | null; // <-- Añadido para guardar los detalles del proceso
+  loading: boolean;
+  error: string | null;
 }
 
-// 3. Nos aseguramos de que nuestro estado inicial cumpla el contrato
 const initialState: TaskDetailState = {
   isOpen: false,
   task: null,
+  processInstance: null,
+  loading: false,
+  error: null,
 };
 
-// 4. Le decimos al store que siempre debe manejar un estado con la forma de 'TaskDetailState'
-const { subscribe, set } = writable<TaskDetailState>(initialState);
+const createTaskDetailStore = () => {
+  const { subscribe, set, update } = writable<TaskDetailState>(initialState);
 
-export const taskDetailStore = {
-  subscribe,
-  // 5. Creamos un contrato para la función 'show': solo aceptará un parámetro que sea de tipo 'Task'
-  show: (task: Task) => set({ isOpen: true, task }),
-  hide: () => set(initialState),
+  const show = async (task: Task) => {
+    // 1. Inmediatamente abre el panel en estado de carga con la info básica de la tarea
+    update(state => ({ 
+      ...state, 
+      isOpen: true, 
+      loading: true, 
+      task: task, 
+      processInstance: null, 
+      error: null 
+    }));
+
+    try {
+      // 2. Busca los detalles completos de la instancia del proceso
+      const instanceDetails = await processInstanceService.getInstanceDetails(task.processInstanceId);
+      
+      // 3. Actualiza el store con los datos completos
+      set({ 
+        isOpen: true, 
+        loading: false, 
+        task: task, 
+        processInstance: instanceDetails, 
+        error: null 
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'An unknown error occurred';
+      set({ 
+        isOpen: true, 
+        loading: false, 
+        task: task, 
+        processInstance: null, 
+        error: message 
+      });
+    }
+  };
+
+  const hide = () => {
+    set(initialState);
+  };
+
+  return {
+    subscribe,
+    show,
+    hide,
+  };
 };
+
+export const taskDetailStore = createTaskDetailStore();

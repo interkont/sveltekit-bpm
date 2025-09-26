@@ -1,30 +1,18 @@
 <script lang="ts">
-  // --- AJUSTE: Se actualizan las rutas de importación ---
+  import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
   import { tooltip } from '$lib/actions/tooltip';
   import { taskDetailStore } from '$lib/stores/taskDetailStore';
-  // --- AJUSTE: Importamos el tipo de dato para una Tarea ---
+  import { taskListStore } from '$lib/stores/taskListStore';
   import type { Task } from '$lib/types';
 
-  // --- AJUSTE: Se aplica el tipo 'Task[]' a nuestro array de datos de maqueta ---
-  let tasks: Task[] = [
-    {
-      id: 'TSK-001', processName: 'Solicitud de Compra #456', taskName: 'Aprobar Solicitud de Gerencia',
-      process: { id: 'PROC-001', processName: 'Solicitud de Compra #456', initiator: 'Ana Martínez', creationDate: '2023-10-27', status: 'En Finanzas' }
-    },
-    {
-      id: 'TSK-002', processName: 'Reembolso de Gastos #122', taskName: 'Revisar Facturas de Viaje',
-      process: { id: 'PROC-002', processName: 'Reembolso de Gastos #122', initiator: 'Juan Pérez', creationDate: '2023-10-26', status: 'En Gerencia' }
-    },
-    {
-      id: 'TSK-003', processName: 'Solicitud de Vacaciones', taskName: 'Validar Calendario de Equipo',
-      process: { id: 'PROC-003', processName: 'Solicitud de Vacaciones', initiator: 'Sofía Loren', creationDate: '2023-10-25', status: 'En Aprobación' }
-    }
-  ];
+  onMount(() => {
+    // Fetch tasks when the component is first mounted
+    taskListStore.fetchTasks();
+  });
 
-  // --- AJUSTE: Se tipa el parámetro 'task' de la función ---
   function handleManageTask(task: Task) {
-    taskDetailStore.show(task); // Llamar al nuevo panel
+    taskDetailStore.show(task); // This will need adjustment later as the Task type has changed
   }
 </script>
 
@@ -34,35 +22,83 @@
       <h2>Mis Tareas Pendientes</h2>
       <p>Aquí encontrarás todas las tareas que requieren tu atención.</p>
     </div>
+    <button class="btn btn-secondary" on:click={taskListStore.fetchTasks} disabled={$taskListStore.loading}>
+      <Icon name="refresh-cw" size={16} spinning={$taskListStore.loading} />
+      <span>Refrescar</span>
+    </button>
   </div>
   
-  <div class="task-list">
-    {#each tasks as task (task.id)}
-      <div class="task-card">
-        <div class="task-info">
-            <div class="task-icon">
-                <Icon name="edit" size={20}/>
-            </div>
-            <div>
-                <h3>{task.taskName}</h3>
-                <p><strong>Proceso:</strong> {task.processName}</p>
-            </div>
-        </div>
-        <div class="task-actions">
-          <button class="manage-btn" on:click={() => handleManageTask(task)} use:tooltip={'Gestionar esta tarea'}>
-            <Icon name="arrow-right-circle" size={16}/>
-            Gestionar Tarea
-          </button>
-        </div>
+  <div class="task-list-container">
+    {#if $taskListStore.loading}
+      <div class="state-message">
+        <Icon name="loader" size={24} spinning={true} />
+        <span>Cargando tareas...</span>
       </div>
-    {/each}
+    {:else if $taskListStore.error}
+      <div class="state-message error">
+        <Icon name="alert-triangle" size={24} />
+        <span>Error al cargar tareas: {$taskListStore.error}</span>
+      </div>
+    {:else if $taskListStore.tasks.length === 0}
+      <div class="state-message">
+        <Icon name="check-circle" size={24} />
+        <span>¡Excelente! No tienes tareas pendientes.</span>
+      </div>
+    {:else}
+      <div class="task-list">
+        {#each $taskListStore.tasks as task (task.taskId)}
+          <div class="task-card">
+            <div class="task-info">
+                <div class="task-icon">
+                    <Icon name="edit" size={20}/>
+                </div>
+                <div>
+                    <h3>{task.taskName}</h3>
+                    <p><strong>Proceso:</strong> {task.processName} (Iniciado por: {task.processStartedBy})</p>
+                </div>
+            </div>
+            <div class="task-actions">
+              <button class="manage-btn" on:click={() => handleManageTask(task)} use:tooltip={'Gestionar esta tarea'}>
+                <Icon name="arrow-right-circle" size={16}/>
+                Gestionar Tarea
+              </button>
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
   </div>
 </div>
 
 <style>
-/* ... (Los estilos de TaskListView se mantienen similares, ajustados para el nuevo botón) ... */
+/* ... (Existing styles remain largely the same, with additions for new states) ... */
 .view-container { display: flex; flex-direction: column; gap: 1.5rem; }
+.view-header { display: flex; justify-content: space-between; align-items: center; }
 .view-header h2 { margin: 0; } .view-header p { margin: 0; color: var(--text-secondary); }
+
+.task-list-container {
+  min-height: 300px; /* Ensure container has a minimum height */
+  display: flex;
+  flex-direction: column;
+}
+
+.state-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-grow: 1;
+  gap: 1rem;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  text-align: center;
+  padding: 2rem;
+  border: 2px dashed var(--border-color);
+  border-radius: 12px;
+}
+.state-message.error {
+  color: #c53030;
+  background-color: #f5656520;
+}
 
 .task-list {
   display: grid;
@@ -113,4 +149,9 @@
   font-weight: 500; cursor: pointer; transition: opacity 0.2s;
 }
 .manage-btn:hover { opacity: 0.9; }
+
+.btn { padding: 0.6rem 1.2rem; font-weight: 600; font-size: 0.9rem; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 0.5rem; }
+.btn-secondary { background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); }
+.btn-secondary:hover:not(:disabled) { background: var(--bg-tertiary); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>

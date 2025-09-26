@@ -3,19 +3,6 @@
   import Icon from '$lib/components/Icon.svelte';
   import { profilePanelStore } from '$lib/stores/profilePanelStore';
   import { authStore } from '$lib/stores/authStore';
-  import { userStore } from '$lib/stores/userStore';
-  import { derived } from 'svelte/store'; // --- 1. Importar derived
-
-  // --- 2. Crear un store derivado para el usuario actual ---
-  const currentUserStore = derived(
-    [authStore, userStore], // Dependencias
-    ([$authStore, $userStore]) => { // Valores de los stores
-      if ($authStore.user?.uid && $userStore.length > 0) {
-        return $userStore.find(u => u.uid === $authStore.user.uid);
-      }
-      return undefined;
-    }
-  );
 
 </script>
 
@@ -44,13 +31,13 @@
 		
 		<div class="w-px h-6 bg-[var(--border-color)]"></div>
 
-		<!-- --- 3. Usar el nuevo store derivado en el HTML --- -->
-		{#if $currentUserStore}
+		<!-- --- 3. Usar directamente el authStore en el HTML --- -->
+		{#if $authStore.user}
 			<div class="user-profile" on:click={() => profilePanelStore.set(true)} title="Gestionar Perfil">
-				<img src={$currentUserStore.avatarUrl} alt="Avatar de usuario">
+				<img src={$authStore.user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent($authStore.user.fullName)}&background=random`} alt="Avatar de usuario">
 				<div class="user-info">
-					<span class="user-name">{$currentUserStore.displayName}</span>
-					<span class="user-role">{$currentUserStore.systemRole}</span>
+					<span class="user-name">{$authStore.user.fullName}</span>
+					<span class="user-role">{$authStore.user.roleId}</span> <!-- Asumiendo que roleId es suficiente por ahora -->
 				</div>
 			</div>
 		{/if}

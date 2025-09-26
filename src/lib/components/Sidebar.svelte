@@ -4,7 +4,7 @@
   import { page } from '$app/stores';
   // --- AJUSTE: Corregir el nombre del store importado ---
   import { modal } from '$lib/stores/modal';
-  import { authStore } from '$lib/stores/authStore';
+  import { authService } from '$lib/services/authService';
 
   $: activeItem = $page.url.hash.substring(1) || 'dashboard';
 
@@ -18,7 +18,7 @@
       title: 'Confirmar Cierre de Sesión',
       message: '¿Estás seguro de que deseas cerrar tu sesión en Flowify?',
       onConfirm: () => {
-        authStore.logout();
+        authService.logout();
       }
     });
   }
