@@ -1,37 +1,31 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-  // --- AJUSTE: Se actualizan las rutas de importación ---
+  import { createEventDispatcher, onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
   import { processDetailStore } from '$lib/stores/processDetailStore';
-  // --- AJUSTE: Importamos el tipo de dato para una instancia de proceso ---
+  import { processListStore } from '$lib/stores/processListStore';
   import type { ProcessInstance } from '$lib/types';
 
   const dispatch = createEventDispatcher();
 
-  // --- AJUSTE: Se tipa la variable para que solo acepte los valores de las pestañas ---
   let activeTab: 'running' | 'historical' = 'running';
 
-  // --- AJUSTE: Se aplica el tipo 'ProcessInstance[]' a los arrays de datos ---
-  const runningProcesses: ProcessInstance[] = [
-    { id: 'PROC-001', processName: 'Solicitud de Compra #456', initiator: 'Ana Martínez', creationDate: '2023-10-27', status: 'En Finanzas' },
-    { id: 'PROC-002', processName: 'Reembolso de Gastos #122', initiator: 'Juan Pérez', creationDate: '2023-10-26', status: 'En Gerencia' }
-  ];
-  const historicalProcesses: ProcessInstance[] = [
-    { id: 'PROC-000', processName: 'Contratación de Personal #99', initiator: 'RRHH', creationDate: '2023-09-15', status: 'Finalizado' }
-  ];
+  onMount(() => {
+    processListStore.fetchInstances();
+  });
 
-  // TypeScript infiere que 'processes' también es de tipo 'ProcessInstance[]'
-  let processes = runningProcesses;
+  // Reactive statements to filter instances based on the active tab and store data
+  $: runningProcesses = $processListStore.instances.filter(p => p.status.toUpperCase() === 'RUNNING');
+  $: historicalProcesses = $processListStore.instances.filter(p => p.status.toUpperCase() !== 'RUNNING');
+  $: processes = activeTab === 'running' ? runningProcesses : historicalProcesses;
 
-  // --- AJUSTE: Se tipa el parámetro de la función ---
   function setTab(tab: 'running' | 'historical') {
     activeTab = tab;
-    processes = tab === 'running' ? runningProcesses : historicalProcesses;
   }
   
-  // --- AJUSTE: Se tipa el parámetro de la función ---
-  function handleShowDetail(process: ProcessInstance) {
-    processDetailStore.show(process);
+  // The logic for showing details is now handled by the processDetailStore,
+  // which will fetch the data. We just need to pass the ID.
+  function handleShowDetail(processId: number) {
+    processDetailStore.show(processId);
   }
 </script>
 
@@ -48,30 +42,53 @@
   </div>
 
   <div class="tabs">
-    <button class:active={activeTab === 'running'} on:click={() => setTab('running')}>En Ejecución</button>
-    <button class:active={activeTab === 'historical'} on:click={() => setTab('historical')}>Históricos</button>
+    <button class:active={activeTab === 'running'} on:click={() => setTab('running')}>
+      En Ejecución ({runningProcesses.length})
+    </button>
+    <button class:active={activeTab === 'historical'} on:click={() => setTab('historical')}>
+      Históricos ({historicalProcesses.length})
+    </button>
   </div>
 
-  <div class="process-list">
-    {#each processes as process (process.id)}
-      <div class="process-card">
-        <div class="process-info">
-          <div class="process-icon"><Icon name="cpu" size={24}/></div>
-          <div>
-            <h3 class="process-name">{process.processName}</h3>
-            <span class="process-meta">Iniciado por <strong>{process.initiator}</strong> el {process.creationDate}</span>
-          </div>
-        </div>
-        <div class="process-status">
-          <span>{process.status}</span>
-        </div>
-        <div class="process-actions">
-          <button class="details-btn" on:click={() => handleShowDetail(process)}>
-            <Icon name="eye" size={16}/> Ver Detalle
-          </button>
-        </div>
+  <div class="process-list-container">
+    {#if $processListStore.loading}
+      <div class="state-placeholder">
+        <Icon name="loader" size={24} spinning={true} />
+        <span>Cargando instancias...</span>
       </div>
-    {/each}
+    {:else if $processListStore.error}
+      <div class="state-placeholder error">
+        <Icon name="alert-triangle" size={24} />
+        <span>Error al cargar: {$processListStore.error}</span>
+      </div>
+    {:else if processes.length === 0}
+      <div class="state-placeholder">
+        <Icon name="inbox" size={24} />
+        <span>No hay instancias en esta vista.</span>
+      </div>
+    {:else}
+      <div class="process-list">
+        {#each processes as process (process.id)}
+          <div class="process-card">
+            <div class="process-info">
+              <div class="process-icon"><Icon name="cpu" size={24}/></div>
+              <div>
+                <h3 class="process-name">{process.processDefinition.name} (ID: {process.id})</h3>
+                <span class="process-meta">Iniciado por <strong>{process.startedByUser.fullName}</strong> el {new Date(process.startTime).toLocaleDateString()}</span>
+              </div>
+            </div>
+            <div class="process-status">
+              <span>{process.status}</span>
+            </div>
+            <div class="process-actions">
+              <button class="details-btn" on:click={() => handleShowDetail(process.id)}>
+                <Icon name="eye" size={16}/> Ver Detalle
+              </button>
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -95,6 +112,14 @@
   border-bottom: 2px solid transparent; transform: translateY(2px);
 }
 .tabs button.active { color: var(--accent-color); border-color: var(--accent-color); }
+
+.process-list-container { min-height: 300px; display: flex; flex-direction: column; }
+.state-placeholder {
+  display: flex; align-items: center; justify-content: center;
+  flex-grow: 1; gap: 1rem; color: var(--text-secondary);
+  border: 2px dashed var(--border-color); border-radius: 12px;
+}
+.state-placeholder.error { color: #c53030; background-color: #f5656520; }
 
 .process-list { display: grid; gap: 1rem; }
 .process-card {

@@ -4,58 +4,71 @@
   import { processDetailStore } from '$lib/stores/processDetailStore';
   import Icon from '$lib/components/Icon.svelte';
   
-  // --- AJUSTE: Importamos los nuevos tipos que definimos ---
-  import type { ProcessMockData, TimelineStep, TimelineStatus } from '$lib/types';
+  import type { ProcessInstance, TimelineStep, TimelineStatus, GeneralInfoItem, BusinessDataItem, Comment, DocumentGroup } from '$lib/types';
 
-  // --- AJUSTE: Tipamos la variable de estado para las pestañas ---
   let activeTab: 'details' | 'comments' | 'documents' = 'details';
 
-  // --- AJUSTE: Aplicamos la 'interface' principal a nuestro objeto de datos ---
-  const mockData: ProcessMockData = {
-    generalInfo: [
-      { label: 'Solicitado por', value: 'Ana Martínez', icon: 'user' },
-      { label: 'Rol del Solicitante', value: 'Desarrollador Senior', icon: 'shield' },
-      { label: 'Fecha de Solicitud', value: '27 de Octubre, 2023', icon: 'calendar' },
-      { label: 'Dependencia', value: 'Tecnología', icon: 'briefcase' },
-    ],
-    businessData: [
-      { label: 'Nombre Completo del Solicitante', value: 'Ana Cecilia Martínez Rojas' },
-      { label: 'Centro de Costos', value: 'FIN-TECH-2023-Q4' },
-      { label: 'Razón de la Compra', value: 'Renovación anual de licencias de software para el equipo de desarrollo. Incluye licencias para IDEs, herramientas de testing y software de gestión de proyectos.' },
-      { label: 'Proveedor Sugerido', value: 'Tech Solutions Inc.' },
-      { label: 'Contacto del Proveedor', value: 'sales@techsolutions.com' },
-      { label: 'Fecha Límite para la Compra', value: '2023-11-15' },
-      { label: 'Presupuesto Aprobado para el Periodo', value: '$10,000.00 USD' },
-    ],
-    timeline: [
-      { taskName: 'Inicio de Solicitud', status: 'COMPLETED', user: 'Ana Martínez', date: '2023-10-27 14:30' },
-      { taskName: 'Aprobación de Gerente', status: 'COMPLETED', user: 'Carlos Vega', date: '2023-10-28 10:15' },
-      { taskName: 'Revisión de Finanzas', status: 'IN_PROGRESS', user: 'Sofía Loren', date: null },
-      { taskName: 'Creación de Orden de Compra', status: 'PENDING', user: 'N/A', date: null },
-      { taskName: 'Recepción de Mercancía', status: 'PENDING', user: 'N/A', date: null },
-      { taskName: 'Cierre de Proceso', status: 'PENDING', user: 'N/A', date: null },
-    ],
-    comments: [
-        { user: 'Ana Martínez', text: 'Adjunto la cotización inicial del proveedor.', date: '2023-10-27 14:30', avatar: 'AM' },
-        { user: 'Carlos Vega', text: 'El monto parece razonable. Aprobado por mi parte. Por favor, revisar presupuesto.', date: '2023-10-28 10:15', avatar: 'CV' },
-    ],
-    documents: [
-      { taskName: 'Inicio de Solicitud', files: [{ name: 'Cotizacion_TechSolutions.pdf', type: 'pdf', date: '2023-10-27', user: 'Ana Martínez' }] },
-      { taskName: 'Aprobación de Gerente', files: [{ name: 'Justificacion_Compra.docx', type: 'doc', date: '2023-10-28', user: 'Carlos Vega' }] },
-    ]
-  };
+  // --- Reactive variables derived from the store ---
+  $: processInstance = $processDetailStore.process;
+  $: generalInfo = processInstance ? mapGeneralInfo(processInstance) : [];
+  $: businessData = processInstance ? mapBusinessData(processInstance.businessData) : [];
+  $: timeline = processInstance ? mapTimeline(processInstance) : [];
+  $: commentsData = processInstance ? mapComments(processInstance.taskInstances || []) : [];
+  $: documentsData = [] as DocumentGroup[]; // Placeholder
+
+  // --- Helper functions (identical to TaskDetailPanel) ---
+  function mapGeneralInfo(instance: ProcessInstance): GeneralInfoItem[] {
+      return [
+          { label: 'Solicitado por', value: instance.startedByUser.fullName, icon: 'user' },
+          { label: 'Correo del Solicitante', value: instance.startedByUser.email, icon: 'at-sign' },
+          { label: 'Fecha de Inicio', value: new Date(instance.startTime).toLocaleString(), icon: 'calendar' },
+          { label: 'Estado Actual', value: instance.status, icon: 'activity' },
+      ];
+  }
+
+  function mapBusinessData(data: Record<string, any>): BusinessDataItem[] {
+      if (!data) return [];
+      return Object.entries(data).map(([key, value]) => ({
+          label: key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()),
+          value: String(value)
+      }));
+  }
+
+  function mapTimeline(instance: ProcessInstance): TimelineStep[] {
+      if (!instance?.taskInstances) return [];
+      const sortedTasks = [...instance.taskInstances].sort((a, b) => b.id - a.id);
+      const mappedSteps = sortedTasks.map(t => ({
+          taskName: t.processElement.name,
+          status: (t.status === 'COMPLETED' ? 'COMPLETED' : 'PENDING') as TimelineStatus,
+          user: t.completedByUser?.fullName || 'N/A',
+          date: t.completionTime ? new Date(t.completionTime).toLocaleString() : null,
+      }));
+      mappedSteps.push({
+        taskName: 'Inicio de Proceso',
+        status: 'COMPLETED',
+        user: instance.startedByUser.fullName,
+        date: new Date(instance.startTime).toLocaleString()
+      });
+      return mappedSteps;
+  }
+
+  function mapComments(tasks: any[]): Comment[] {
+      if (!tasks) return [];
+      return tasks
+          .filter(task => typeof task.comments === 'string' && task.comments.trim() !== '')
+          .map(task => ({
+              user: task.completedByUser?.fullName || 'Usuario del Sistema',
+              text: task.comments || '',
+              date: new Date(task.completionTime || task.createdAt).toLocaleString(),
+              avatar: (task.completedByUser?.fullName || 'SYS').substring(0, 2).toUpperCase()
+          }))
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }
   
-  // TypeScript ahora infiere automáticamente que 'executedTimeline' es de tipo: TimelineStep[]
-  const executedTimeline = mockData.timeline.filter(
-    (step: TimelineStep) => step.status === 'COMPLETED' || step.status === 'IN_PROGRESS'
-  );
+  $: executedTimeline = timeline.filter(step => step.status === 'COMPLETED' || step.status === 'IN_PROGRESS');
+  $: totalSteps = timeline.length;
+  $: currentStepNumber = executedTimeline.length;
 
-  const descendingExecutedTimeline: TimelineStep[] = executedTimeline.slice().reverse();
-
-  const totalSteps: number = mockData.timeline.length;
-  const currentStepNumber: number = executedTimeline.length;
-
-  // --- AJUSTE: Tipamos el parámetro de la función y su valor de retorno ---
   function getStatusIcon(status: TimelineStatus): { name: string; color: string } {
     if (status === 'COMPLETED') return { name: 'check-circle', color: 'var(--success-color)' };
     if (status === 'IN_PROGRESS') return { name: 'loader', color: 'var(--accent-color)' };
@@ -63,148 +76,150 @@
   }
 </script>
 
-{#if $processDetailStore.isOpen && $processDetailStore.process}
+{#if $processDetailStore.isOpen}
   <div class="panel-backdrop" on:click={processDetailStore.hide}></div>
   
   <aside class="detail-panel" transition:slide={{ duration: 400, easing: quintOut, axis: 'x' }}>
-    <!-- Encabezado del Panel -->
-    <header class="panel-header">
-      <div>
-        <h2 title={$processDetailStore.process.processName}>{$processDetailStore.process.processName}</h2>
-        <p>ID: {$processDetailStore.process.id} | Estado: <span class="status-chip">{$processDetailStore.process.status}</span></p>
-      </div>
-      <button class="close-btn" on:click={processDetailStore.hide} title="Cerrar panel">
-        <Icon name="x" size={28}/>
-      </button>
-    </header>
-
-    <!-- Contenido Principal (Layout de 2 Columnas) -->
-    <div class="panel-content">
-      <!-- Columna Izquierda (Resumen y Trazabilidad) -->
-      <div class="left-column">
-        <!-- Sección de Información General -->
-        <section class="info-section">
-          <h3><Icon name="info" size={16}/> Información General</h3>
-          <ul class="data-list">
-            {#each mockData.generalInfo as item}
-              <li>
-                <Icon name={item.icon} size={16} class="data-icon"/>
-                <div>
-                  <span class="label">{item.label}</span>
-                  <span class="value">{item.value}</span>
-                </div>
-              </li>
-            {/each}
-          </ul>
-        </section>
-
-        <!-- Sección de Trazabilidad (Timeline) -->
-        <section class="info-section">
-          <div class="timeline-header">
-            <h3><Icon name="git-commit" size={18}/> Trazabilidad</h3>
-            <span class="progress-indicator">Paso {currentStepNumber} de {totalSteps}</span>
-          </div>
-          <div class="timeline">
-            {#each descendingExecutedTimeline as step, i (step.taskName)}
-              <div class="timeline-item status-{step.status.toLowerCase()}">
-                <div class="timeline-connector">
-                  <div class="timeline-icon">
-                    <Icon name={getStatusIcon(step.status).name} size={16} color={getStatusIcon(step.status).color} />
-                  </div>
-                  {#if i < descendingExecutedTimeline.length - 1}
-                    <div class="timeline-line"></div>
-                  {/if}
-                </div>
-                <div class="timeline-content">
-                  <p class="task-name">{step.taskName}</p>
-                  {#if step.status === 'COMPLETED'}
-                    <span class="user-info">Completado por <strong>{step.user}</strong> el {step.date}</span>
-                  {:else if step.status === 'IN_PROGRESS'}
-                    <span class="user-info">Tarea actual asignada a <strong>{step.user}</strong></span>
-                  {/if}
-                </div>
-              </div>
-            {/each}
-          </div>
-        </section>
-      </div>
-
-      <!-- Columna Derecha (Contenido Principal con Tabs) -->
-      <div class="right-column">
-        <div class="tab-header">
-          <button class:active={activeTab === 'details'} on:click={() => activeTab = 'details'}>
-            <Icon name="file-text" size={16}/> Detalles de la Solicitud
-          </button>
-          <button class:active={activeTab === 'comments'} on:click={() => activeTab = 'comments'}>
-            <Icon name="message-square" size={16}/> Observaciones
-          </button>
-          <button class:active={activeTab === 'documents'} on:click={() => activeTab = 'documents'}>
-            <Icon name="paperclip" size={16}/> Documentos
-          </button>
+    {#if $processDetailStore.loading}
+        <div class="state-placeholder">
+            <Icon name="loader" size="32" spinning={true} />
+            <p>Cargando detalles de la instancia...</p>
         </div>
+    {:else if $processDetailStore.error}
+        <div class="state-placeholder error">
+            <Icon name="alert-triangle" size="32" />
+            <p>Error al cargar: {$processDetailStore.error}</p>
+        </div>
+    {:else if processInstance}
+        <header class="panel-header">
+        <div>
+            <h2 title={processInstance.processDefinition.name}>{processInstance.processDefinition.name}</h2>
+            <p>ID: {processInstance.id} | Estado: <span class="status-chip">{processInstance.status}</span></p>
+        </div>
+        <button class="close-btn" on:click={processDetailStore.hide} title="Cerrar panel">
+            <Icon name="x" size={28}/>
+        </button>
+        </header>
 
-        <div class="tab-content">
-          {#if activeTab === 'details'}
-            <div class="form-details-section">
-              <div class="form-placeholder">
-                {#each mockData.businessData as field}
-                  <div class="form-field">
-                    <label>{field.label}</label>
-                    <div class="value-box">
-                      {field.value}
+        <div class="panel-content">
+        <div class="left-column">
+            <section class="info-section">
+            <h3><Icon name="info" size={16}/> Información General</h3>
+            <ul class="data-list">
+                {#each generalInfo as item}
+                <li>
+                    <Icon name={item.icon} size={16} class="data-icon"/>
+                    <div>
+                    <span class="label">{item.label}</span>
+                    <span class="value">{item.value}</span>
                     </div>
-                  </div>
+                </li>
                 {/each}
-              </div>
+            </ul>
+            </section>
+
+            <section class="info-section">
+            <div class="timeline-header">
+                <h3><Icon name="git-commit" size={18}/> Trazabilidad</h3>
+                <span class="progress-indicator">Paso {currentStepNumber} de {totalSteps}</span>
             </div>
-          {:else if activeTab === 'comments'}
-            <div class="comments-section">
-              {#each mockData.comments as comment}
-                <div class="comment-bubble">
-                  <div class="comment-avatar">{comment.avatar}</div>
-                  <div class="comment-content">
-                    <div class="comment-header">
-                      <strong>{comment.user}</strong>
-                      <span>{comment.date}</span>
+            <div class="timeline">
+                {#each timeline as step, i (step.taskName + i)}
+                <div class="timeline-item status-{step.status.toLowerCase()}">
+                    <div class="timeline-connector">
+                    <div class="timeline-icon">
+                        <Icon name={getStatusIcon(step.status).name} size={16} color={getStatusIcon(step.status).color} />
                     </div>
-                    <p>{comment.text}</p>
-                  </div>
+                    {#if i < timeline.length - 1}
+                        <div class="timeline-line"></div>
+                    {/if}
+                    </div>
+                    <div class="timeline-content">
+                    <p class="task-name">{step.taskName}</p>
+                    {#if step.status === 'COMPLETED'}
+                        <span class="user-info">Completado por <strong>{step.user}</strong> el {step.date}</span>
+                    {:else if step.status === 'IN_PROGRESS'}
+                        <span class="user-info">Tarea actual asignada a <strong>{step.user}</strong></span>
+                    {/if}
+                    </div>
                 </div>
-              {/each}
+                {/each}
             </div>
-          {:else if activeTab === 'documents'}
-            <div class="documents-section">
-              {#each mockData.documents as docGroup}
-                <h4>{docGroup.taskName}</h4>
-                <ul class="file-list">
-                  {#each docGroup.files as file}
-                    <li>
-                      <Icon name={file.type === 'pdf' ? 'file-text' : 'file'} size={20} class="file-icon"/>
-                      <div class="file-info">
-                        <a href="#" class="file-name">{file.name}</a>
-                        <span class="file-meta">Subido por {file.user} el {file.date}</span>
-                      </div>
-                      <a href="#" class="download-btn" title="Descargar"><Icon name="download" size={18}/></a>
-                    </li>
-                  {/each}
-                </ul>
-              {/each}
-            </div>
-          {/if}
+            </section>
         </div>
-      </div>
-    </div>
+
+        <div class="right-column">
+            <div class="tab-header">
+            <button class:active={activeTab === 'details'} on:click={() => activeTab = 'details'}>
+                <Icon name="file-text" size={16}/> Detalles de la Solicitud
+            </button>
+            <button class:active={activeTab === 'comments'} on:click={() => activeTab = 'comments'}>
+                <Icon name="message-square" size={16}/> Observaciones
+            </button>
+            <button class:active={activeTab === 'documents'} on:click={() => activeTab = 'documents'}>
+                <Icon name="paperclip" size={16}/> Documentos
+            </button>
+            </div>
+
+            <div class="tab-content">
+            {#if activeTab === 'details'}
+                <div class="form-details-section">
+                <div class="form-placeholder">
+                    {#each businessData as field}
+                    <div class="form-field">
+                        <label>{field.label}</label>
+                        <div class="value-box">
+                        {field.value}
+                        </div>
+                    </div>
+                    {/each}
+                </div>
+                </div>
+            {:else if activeTab === 'comments'}
+                <div class="comments-section">
+                    {#if commentsData.length > 0}
+                        {#each commentsData as comment}
+                            <div class="comment-bubble">
+                            <div class="comment-avatar">{comment.avatar}</div>
+                            <div class="comment-content">
+                                <div class="comment-header">
+                                <strong>{comment.user}</strong>
+                                <span>{comment.date}</span>
+                                </div>
+                                <p>{comment.text}</p>
+                            </div>
+                            </div>
+                        {/each}
+                    {:else}
+                        <p class="no-data-placeholder">No hay observaciones registradas para esta instancia.</p>
+                    {/if}
+                </div>
+            {:else if activeTab === 'documents'}
+                <div class="documents-section">
+                    <p class="no-data-placeholder">La gestión de documentos se implementará en una futura versión.</p>
+                </div>
+            {/if}
+            </div>
+        </div>
+        </div>
+    {/if}
   </aside>
 {/if}
 
 <style>
-/* Estilos generales del panel y backdrop */
+/* Estilos sin cambios */
 .panel-backdrop {
   position: fixed; top: 0; left: 0;
   width: 100vw; height: 100vh;
   background-color: rgba(0, 0, 0, 0.5);
   z-index: 1000;
 }
+.state-placeholder {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; gap: 1rem; color: var(--text-secondary); text-align: center;
+  padding: 2rem;
+}
+.state-placeholder.error { color: #c53030; }
 .detail-panel {
   position: fixed; top: 0; right: 0;
   width: 85vw; max-width: 1400px; height: 100vh;
@@ -214,7 +229,6 @@
   display: flex; flex-direction: column;
 }
 
-/* Header */
 .panel-header {
   display: flex; justify-content: space-between; align-items: center;
   padding: 1.5rem 2rem; border-bottom: 1px solid var(--border-color); flex-shrink: 0;
@@ -225,7 +239,6 @@
 .close-btn { background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: 0.5rem; }
 .close-btn:hover { color: var(--text-primary); }
 
-/* Contenido Principal y Layout */
 .panel-content {
   flex-grow: 1; display: grid; grid-template-columns: 350px 1fr;
   gap: 2rem; padding: 2rem; overflow: hidden;
@@ -286,19 +299,27 @@
 .status-in_progress .task-name { color: var(--accent-color); }
 
 /* Columna Derecha - Tabs */
-.tab-header { display: flex; border-bottom: 2px solid var(--border-color); margin-bottom: 1.5rem; flex-shrink: 0; }
-.tab-header button {
+.right-column .tab-header { display: flex; border-bottom: 2px solid var(--border-color); margin-bottom: 1.5rem; flex-shrink: 0; }
+.right-column .tab-header button {
   display: flex; align-items: center; gap: 0.5rem; background: none; border: none;
   padding: 0.75rem 1rem; font-size: 1rem; font-weight: 500; cursor: pointer;
   color: var(--text-secondary); position: relative;
   border-bottom: 2px solid transparent; transform: translateY(2px);
 }
-.tab-header button.active { color: var(--accent-color); border-color: var(--accent-color); }
-.tab-header button:hover { color: var(--text-primary); }
+.right-column .tab-header button.active { color: var(--accent-color); border-color: var(--accent-color); }
+.right-column .tab-header button:hover { color: var(--text-primary); }
 .tab-content { flex-grow: 1; overflow-y: auto; padding-right: 1rem; }
+.no-data-placeholder {
+    font-style: italic;
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 2rem;
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+}
 
 /* Sección de Detalles de Formulario */
-.form-placeholder { display: flex; flex-direction: column; gap: 1.5rem; }
+.form-details-section .form-placeholder { display: flex; flex-direction: column; gap: 1.5rem; }
 .form-field label { font-weight: 500; color: var(--text-primary); margin-bottom: 0.5rem; display: block; }
 .value-box {
   background-color: var(--bg-secondary); border: 1px solid var(--border-color);

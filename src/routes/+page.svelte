@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import type { ProcessDefinition } from '$lib/types';
 
 	// Stores
 	import { authStore } from '$lib/stores/authStore';
@@ -18,6 +19,7 @@
 	import ProcessModelListView from '$lib/components/ProcessModelListView.svelte';
 	import ModelerTest from '$lib/components/ModelerNew.svelte';
     import UserManagementView from '$lib/components/UserManagementView.svelte';
+	import StartProcessFormView from '$lib/components/StartProcessFormView.svelte';
 
 	// Paneles de Detalle
 	import TaskDetailPanel from '$lib/components/TaskDetailPanel.svelte';
@@ -25,6 +27,7 @@
 	import ProcessModelDetailView from '$lib/components/ProcessModelDetailView.svelte';
 	
 	let currentView = 'dashboard';
+	let viewContext: any = null; // Variable to hold context for views
 
     // Este bloque reactivo leerá el #hash de la URL y cambiará la vista
 	$: {
@@ -40,8 +43,9 @@
 		taskDetailStore.hide();
 	}
 
-    function handleNavigation(event: CustomEvent<{view: string}>) {
+    function handleNavigation(event: CustomEvent<{view: string, context?: any}>) {
         if (typeof window !== 'undefined') {
+			viewContext = event.detail.context;
             window.location.hash = event.detail.view;
         }
     }
@@ -63,17 +67,19 @@
 		<ModelerTest />
 	{:else if currentView === 'new-process'}
 		<NewProcessView on:navigate={handleNavigation} />
+	{:else if currentView === 'start-process-form'}
+		<StartProcessFormView processDefinition={viewContext as ProcessDefinition} on:navigate={handleNavigation} />
     {:else if currentView === 'users'} 
         <UserManagementView />
 	{/if}
 
 	<!-- Renderizado condicional de Paneles -->
 	{#if $taskDetailStore.isOpen}
-		<TaskDetailPanel task={$taskDetailStore.task} on:submit={handleTaskSubmit} />
+		<TaskDetailPanel on:submit={handleTaskSubmit} />
 	{/if}
 
 	{#if $processDetailStore.isOpen}
-		<ProcessDetailView process={$processDetailStore.process} />
+		<ProcessDetailView />
 	{/if}
 
 	{#if $processModelDetailStore.isOpen}

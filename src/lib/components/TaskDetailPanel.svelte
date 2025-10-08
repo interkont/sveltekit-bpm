@@ -1,30 +1,47 @@
 <script lang="ts">
     import { slide } from 'svelte/transition';
     import { quintOut } from 'svelte/easing';
-    import { createEventDispatcher } from 'svelte';
+    import { createEventDispatcher, onMount } from 'svelte';
     import { taskDetailStore } from '$lib/stores/taskDetailStore';
+    import { taskListStore } from '$lib/stores/taskListStore';
     import { modal } from '$lib/stores/modal';
     import Icon from '$lib/components/Icon.svelte';
+    import { taskService } from '$lib/services/taskService';
+    import { toast } from '$lib/stores/toast';
     import type { Task, ProcessInstance, BusinessDataItem, GeneralInfoItem, TimelineStep, TimelineStatus, Comment, DocumentGroup, ProcessTaskInstance } from '$lib/types';
 
-    const dispatch = createEventDispatcher<{
-      submit: { task: Task; action: string; comments: string };
-    }>();
-
     let activeTab: 'form' | 'details' = 'form';
-    let selectedAction: 'approve' | 'reject' | 'request-info' = 'approve';
+    let selectedAction: string = '';
     let comments: string = '';
-    
+    let formData: Record<string, any> = {}; // Renamed from businessData to be more specific
+    let isSubmitting = false;
+
     // --- Reactive variables derived from the store state ---
     $: task = $taskDetailStore.task;
     $: processInstance = $taskDetailStore.processInstance;
+    $: formDefinition = $taskDetailStore.formDefinition;
     $: generalInfo = processInstance ? mapGeneralInfo(processInstance) : [];
-    $: businessData = processInstance ? mapBusinessData(processInstance.businessData) : [];
     $: timeline = processInstance ? mapTimeline(processInstance) : [];
     $: commentsData = processInstance ? mapComments(processInstance.taskInstances) : [];
-    $: documentsData = [] as DocumentGroup[]; // Placeholder for future use
+    $: documentsData = [] as DocumentGroup[];
+    // This variable is for displaying the read-only process data
+    $: businessDataDisplay = processInstance ? mapBusinessData(processInstance.businessData) : [];
 
-    // --- Helper functions to transform API data to UI format ---
+
+    // When the form definition loads, initialize the formData for editable fields
+    $: if (formDefinition) {
+      formData = {};
+      formDefinition.fields.forEach(field => {
+        // Only add non-readonly fields to the data we can submit
+        if (!field.validations.isReadonly) {
+          formData[field.name] = field.value ?? '';
+        }
+      });
+      if (formDefinition.actions.length > 0) {
+        selectedAction = formDefinition.actions[0];
+      }
+    }
+
     function mapGeneralInfo(instance: ProcessInstance): GeneralInfoItem[] {
         return [
             { label: 'Solicitado por', value: instance.startedByUser.fullName, icon: 'user' },
@@ -42,35 +59,26 @@
         }));
     }
 
-    // Maps task instances from the API to the timeline format required by the UI
     function mapTimeline(instance: ProcessInstance): TimelineStep[] {
         if (!instance?.taskInstances) return [];
-
-        // 1. Sort task instances by ID descending
         const sortedTasks = [...instance.taskInstances].sort((a, b) => b.id - a.id);
-
-        // 2. Map sorted tasks to the UI format, using the correct name field
         const mappedSteps = sortedTasks.map(t => ({
-            taskName: t.processElement.name, // <-- Using correct name field
+            taskName: t.processElement.name,
             status: (t.status === 'COMPLETED' ? 'COMPLETED' : 'PENDING') as TimelineStatus,
             user: t.completedByUser?.fullName || 'N/A',
             date: t.completionTime ? new Date(t.completionTime).toLocaleString() : null,
         }));
-        
-        // 3. Add the start event to the end of the list
         mappedSteps.push({
           taskName: 'Inicio de Proceso',
           status: 'COMPLETED',
           user: instance.startedByUser.fullName,
           date: new Date(instance.startTime).toLocaleString()
         });
-
         return mappedSteps;
     }
     
     function mapComments(tasks: ProcessTaskInstance[]): Comment[] {
         if (!tasks) return [];
-        
         return tasks
             .filter(task => typeof task.comments === 'string' && task.comments.trim() !== '')
             .map(task => ({
@@ -82,21 +90,36 @@
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }
   
-    function handleSubmit() {
-        if (!task) return;
-        const actionTextMap = { approve: 'Aprobar', reject: 'Rechazar', 'request-info': 'Solicitar más información' };
-        const readableAction = actionTextMap[selectedAction] || selectedAction;
+    async function handleSubmit() {
+        if (!task || !formDefinition) return;
+        isSubmitting = true;
+        try {
+            const payload = {
+                action: selectedAction,
+                comments: comments,
+                formData: formData
+            };
+            await taskService.completeTask(task.taskId, payload);
+            toast.show(`Tarea "${task.taskName}" completada.`, 'success');
+            taskDetailStore.hide();
+            taskListStore.fetchTasks(); // Refresh the task list
+        } catch (e) {
+            const message = e instanceof Error ? e.message : 'Ocurrió un error inesperado.';
+            toast.show(message, 'error');
+        } finally {
+            isSubmitting = false;
+        }
+    }
 
+    function confirmAndSubmit() {
+        if (!task) return;
         modal.show({
-            title: `Confirmar Acción: ${readableAction}`,
-            message: `¿Estás seguro de que deseas finalizar esta tarea con la acción "${readableAction}"?`,
-            onConfirm: () => {
-                dispatch('submit', { task: task!, action: selectedAction, comments: comments });
-            }
+            title: `Confirmar Acción: ${selectedAction}`,
+            message: `¿Estás seguro de que deseas finalizar esta tarea?`,
+            onConfirm: handleSubmit
         });
     }
 
-    // --- Logic for Timeline display ---
     $: executedTimeline = timeline.filter(step => step.status === 'COMPLETED' || step.status === 'IN_PROGRESS');
     $: totalSteps = timeline.length;
     $: currentStepNumber = executedTimeline.length;
@@ -136,38 +159,78 @@
 
     <div class="panel-content-full">
         {#if $taskDetailStore.loading}
-            <div class="state-placeholder">
-                <Icon name="loader" size={32} spinning={true} />
-                <p>Cargando detalles del proceso...</p>
-            </div>
+            <div class="state-placeholder"><Icon name="loader" size={32} spinning={true} /><p>Cargando detalles...</p></div>
         {:else if $taskDetailStore.error}
-            <div class="state-placeholder error">
-                <Icon name="alert-triangle" size={32} />
-                <p>Error al cargar: {$taskDetailStore.error}</p>
-            </div>
-        {:else if processInstance}
+            <div class="state-placeholder error"><Icon name="alert-triangle" size={32} /><p>Error al cargar: {$taskDetailStore.error}</p></div>
+        {:else if processInstance && formDefinition}
             {#if activeTab === 'form'}
                 <div class="form-content">
-                    <div class="form-placeholder">
-                        <p class="placeholder-text">El formulario dinámico para la tarea "{task?.taskName}" se implementará aquí.</p>
+                    <!-- Columna Izquierda: Formulario Dinámico -->
+                    <div class="dynamic-form">
+                        <h3><Icon name="file-text" size={18}/> Formulario</h3>
+                        {#each formDefinition.fields as field (field.name)}
+                            <div class="form-field">
+                                <label for={field.name}>
+                                {field.label}
+                                {#if field.validations.isRequired && !field.validations.isReadonly}<span class="required-star">*</span>{/if}
+                                </label>
+                                
+                                {#if field.validations.isReadonly}
+                                    <div class="value-box">{field.value}</div>
+                                {:else if field.fieldType === 'NUMBER'}
+                                    <input type="number" id={field.name} bind:value={formData[field.name]} required={field.validations.isRequired} />
+                                {:else if field.fieldType === 'TEXTAREA'}
+                                    <textarea id={field.name} rows="4" bind:value={formData[field.name]} required={field.validations.isRequired}></textarea>
+                                {:else if field.fieldType === 'DATE'}
+                                    <input type="date" id={field.name} bind:value={formData[field.name]} required={field.validations.isRequired} />
+                                {:else}
+                                    <input type="text" id={field.name} bind:value={formData[field.name]} required={field.validations.isRequired} />
+                                {/if}
+                            </div>
+                        {/each}
                     </div>
+                    
+                    <!-- Columna Derecha: Acciones y Contexto -->
                     <div class="action-form">
-                        <h3><Icon name="check-square" size={18}/> Finalizar Tarea</h3>
-                        <div class="form-field">
-                          <label for="action-select">Selecciona una acción</label>
-                          <select id="action-select" bind:value={selectedAction}>
-                            <option value="approve">Aprobar</option>
-                            <option value="reject">Rechazar</option>
-                            <option value="request-info">Solicitar más información</option>
-                          </select>
-                        </div>
-                        <div class="form-field">
-                          <label for="comments-textarea">Añadir observaciones (opcional)</label>
-                          <textarea id="comments-textarea" rows="4" placeholder="Escribe tus comentarios aquí..." bind:value={comments}></textarea>
-                        </div>
-                        <div class="form-actions">
-                          <button class="cancel-btn" on:click={taskDetailStore.hide}>Cancelar</button>
-                          <button class="submit-btn" on:click={handleSubmit}>Finalizar Tarea</button>
+                        <section class="info-section">
+                            <h3><Icon name="info" size={16}/> Datos del Proceso</h3>
+                            <div class="form-placeholder-details">
+                                {#each businessDataDisplay as field}
+                                <div class="form-field">
+                                    <label>{field.label}</label>
+                                    <div class="value-box">
+                                    {field.value}
+                                    </div>
+                                </div>
+                                {/each}
+                            </div>
+                        </section>
+
+                        <div class="action-section">
+                            <h3><Icon name="check-square" size={18}/> Finalizar Tarea</h3>
+                            <div class="form-field">
+                              <label for="action-select">Selecciona una acción</label>
+                              <select id="action-select" bind:value={selectedAction}>
+                                {#each formDefinition.actions as action}
+                                    <option value={action}>{action}</option>
+                                {/each}
+                              </select>
+                            </div>
+                            <div class="form-field">
+                              <label for="comments-textarea">Añadir observaciones (opcional)</label>
+                              <textarea id="comments-textarea" rows="4" placeholder="Escribe tus comentarios aquí..." bind:value={comments}></textarea>
+                            </div>
+                            <div class="form-actions">
+                              <button class="cancel-btn" on:click={taskDetailStore.hide}>Cancelar</button>
+                              <button class="submit-btn" on:click={confirmAndSubmit} disabled={isSubmitting}>
+                                {#if isSubmitting}
+                                    <Icon name="loader" size={16} spinning={true} />
+                                    <span>Procesando...</span>
+                                {:else}
+                                    Finalizar Tarea
+                                {/if}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -210,8 +273,6 @@
                                     <p class="task-name">{step.taskName}</p>
                                     {#if step.status === 'COMPLETED'}
                                         <span class="user-info">Completado por <strong>{step.user}</strong> el {step.date}</span>
-                                    {:else if step.status === 'IN_PROGRESS'}
-                                        <span class="user-info">Tarea actual asignada a <strong>{step.user}</strong></span>
                                     {/if}
                                     </div>
                                 </div>
@@ -224,7 +285,7 @@
                             <section class="info-section">
                                 <h3><Icon name="file-text" size={16}/> Datos del Proceso</h3>
                                 <div class="form-placeholder-details">
-                                    {#each businessData as field}
+                                    {#each businessDataDisplay as field}
                                     <div class="form-field">
                                         <label>{field.label}</label>
                                         <div class="value-box">
@@ -260,7 +321,6 @@
                                  <div class="documents-section">
                                     {#if documentsData.length > 0}
                                         {#each documentsData as docGroup}
-                                            <!-- Document rendering will go here -->
                                         {/each}
                                     {:else}
                                         <p class="no-data-placeholder">No hay documentos adjuntos.</p>
@@ -277,7 +337,7 @@
 {/if}
 
 <style>
-/* Estilos sin cambios */
+/* Estilos existentes */
 .panel-backdrop {
   position: fixed; top: 0; left: 0;
   width: 100vw; height: 100vh;
@@ -325,32 +385,53 @@
 
 .panel-content-full { flex-grow: 1; overflow-y: auto; padding: 2rem; }
 
-.form-content { display: flex; flex-direction: column; height: 100%; }
-.form-placeholder {
-  border: 2px dashed var(--border-color); border-radius: 12px;
-  padding: 2rem; text-align: center; flex-grow: 1;
-  display: flex; align-items: center; justify-content: center;
+/* Layout del formulario actualizado a 2 columnas */
+.form-content {
+    display: grid;
+    grid-template-columns: 1fr 380px; /* Columna principal y columna de acciones/contexto */
+    gap: 2rem;
+    height: 100%;
 }
-.placeholder-text { color: var(--text-secondary); }
+.dynamic-form {
+    background-color: var(--bg-primary);
+    border-radius: 12px;
+    overflow-y: auto;
+    border-right: 1px solid var(--border-color);
+    padding-right: 2rem;
+}
 .action-form {
-  margin-top: 2rem; padding-top: 2rem;
-  border-top: 1px solid var(--border-color); flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
 }
-.action-form h3, .info-section h3 {
-  display: flex; align-items: center; gap: 0.5rem; margin: 0 0 1rem 0;
-  font-size: 1.1rem; color: var(--text-primary); font-weight: 600;
+.action-form h3, .dynamic-form h3 {
+  display: flex; align-items: center; gap: 0.5rem; margin: 0 0 1.5rem 0;
+  font-size: 1.25rem; color: var(--text-primary); font-weight: 600;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
 }
-.form-field { margin-bottom: 1rem; }
+.form-field { margin-bottom: 1.5rem; }
 .form-field label { display: block; font-weight: 500; color: var(--text-primary); margin-bottom: 0.5rem; }
-.form-field select, .form-field textarea {
+.form-field select, .form-field textarea, .form-field input {
   width: 100%; padding: 0.75rem; border: 1px solid var(--border-color);
   background-color: var(--bg-secondary); color: var(--text-primary);
   border-radius: 8px; font-size: 1rem; box-sizing: border-box;
 }
-.form-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem; }
+.form-field input:disabled, .form-field textarea:disabled, .value-box {
+    background-color: var(--bg-hover);
+    color: var(--text-secondary);
+    cursor: not-allowed;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    white-space: pre-wrap; 
+    word-wrap: break-word;
+}
+.form-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: auto; padding-top: 1rem; }
 button { cursor: pointer; font-weight: 500; padding: 0.75rem 1.5rem; border-radius: 8px; border: 1px solid transparent; }
 .cancel-btn { background-color: var(--bg-secondary); color: var(--text-primary); border-color: var(--border-color); }
-.submit-btn { background-color: var(--accent-color); color: white; }
+.submit-btn { background-color: var(--accent-color); color: white; display: flex; align-items: center; gap: 0.5rem; }
+.submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .process-details-content { display: grid; grid-template-columns: 350px 1fr; gap: 2rem; height: 100%; }
 .left-column { display: flex; flex-direction: column; gap: 2rem; overflow-y: auto; }
@@ -358,7 +439,6 @@ button { cursor: pointer; font-weight: 500; padding: 0.75rem 1.5rem; border-radi
 .tab-content-details { display: flex; flex-direction: column; gap: 2rem; }
 .info-section { background-color: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-color); }
 .form-placeholder-details { display: flex; flex-direction: column; gap: 1.5rem; }
-.value-box { background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.75rem 1rem; color: var(--text-secondary); white-space: pre-wrap; word-wrap: break-word; }
 
 .data-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 1rem; }
 .data-list li { display: flex; align-items: flex-start; gap: 0.75rem; }
@@ -379,19 +459,8 @@ button { cursor: pointer; font-weight: 500; padding: 0.75rem 1.5rem; border-radi
 .task-name { font-weight: 600; margin: 0.5rem 0 0.25rem; }
 .user-info { font-size: 0.85rem; color: var(--text-secondary); }
 .status-in_progress .task-name { color: var(--accent-color); }
-.comments-section {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-.no-data-placeholder {
-    font-style: italic;
-    color: var(--text-secondary);
-    text-align: center;
-    padding: 2rem;
-    background-color: var(--bg-primary);
-    border-radius: 8px;
-}
+.comments-section { display: flex; flex-direction: column; gap: 1.5rem; }
+.no-data-placeholder { font-style: italic; color: var(--text-secondary); text-align: center; padding: 2rem; background-color: var(--bg-primary); border-radius: 8px; }
 .comment-bubble { display: flex; gap: 1rem; }
 .comment-avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; background-color: var(--accent-color); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
 .comment-content { background-color: var(--bg-primary); padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border-color); width: 100%; }
@@ -408,4 +477,5 @@ button { cursor: pointer; font-weight: 500; padding: 0.75rem 1.5rem; border-radi
 .file-meta { display: block; font-size: 0.8rem; color: var(--text-secondary); }
 .download-btn { color: var(--text-secondary); }
 .download-btn:hover { color: var(--accent-color); }
+.required-star { color: #c53030; margin-left: 0.25rem; }
 </style>

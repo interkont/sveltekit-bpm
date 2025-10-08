@@ -18,7 +18,6 @@ export interface ProcessRole {
     description?: string;
 }
 
-// Sub-interfaz para una TaskInstance dentro de la respuesta del Proceso
 export interface ProcessTaskInstance {
     id: number;
     status: string;
@@ -36,9 +35,6 @@ export interface ProcessTaskInstance {
     } | null;
 }
   
-/**
- * Define la estructura detallada de una Instancia de Proceso, como la devuelve la API.
- */
 export interface ProcessInstance {
     id: number;
     processDefId: number;
@@ -62,10 +58,9 @@ export interface ProcessInstance {
         fullName: string;
         email: string;
     };
-    taskInstances: ProcessTaskInstance[];
+    taskInstances?: ProcessTaskInstance[];
 }
 
-// Tarea principal para la lista / bandeja de entrada
 export interface Task {
     taskId: number;
     taskName: string;
@@ -83,6 +78,39 @@ export interface ProcessModel {
     version: string;
     bpmnXml: string;
 }
+
+export interface ProcessDefinition {
+    id: number;
+    businessProcessKey: string;
+    name: string;
+    description: string;
+    version: number;
+    category: string | null;
+    status: string;
+    bpmnProcessId: string;
+    createdAt: string;
+}
+
+// --- Tipos para Formularios Dinámicos ---
+
+export interface FormFieldDefinition {
+    name: string;
+    label: string;
+    fieldType: 'TEXT' | 'NUMBER' | 'TEXTAREA' | 'DATE';
+    value: string | number | null;
+    validations: {
+        isRequired: boolean;
+        isReadonly: boolean;
+    };
+}
+
+export interface StartFormDefinition {
+    taskName: string;
+    fields: FormFieldDefinition[];
+    actions: string[];
+}
+
+export interface TaskFormDefinition extends StartFormDefinition {} // Es la misma estructura
   
 // --- (El resto de los tipos de UI se mantienen igual) ---
   

@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
-  import { tooltip } from '$lib/actions/tooltip';
   import { taskDetailStore } from '$lib/stores/taskDetailStore';
   import { taskListStore } from '$lib/stores/taskListStore';
   import type { Task } from '$lib/types';
@@ -10,10 +9,6 @@
     // Fetch tasks when the component is first mounted
     taskListStore.fetchTasks();
   });
-
-  function handleManageTask(task: Task) {
-    taskDetailStore.show(task); // This will need adjustment later as the Task type has changed
-  }
 </script>
 
 <div class="view-container">
@@ -23,24 +18,24 @@
       <p>Aquí encontrarás todas las tareas que requieren tu atención.</p>
     </div>
     <button class="btn btn-secondary" on:click={taskListStore.fetchTasks} disabled={$taskListStore.loading}>
-      <Icon name="refresh-cw" size={16} spinning={$taskListStore.loading} />
+      <Icon name="loader" size={16} spinning={$taskListStore.loading} />
       <span>Refrescar</span>
     </button>
   </div>
   
   <div class="task-list-container">
     {#if $taskListStore.loading}
-      <div class="state-message">
+      <div class="state-placeholder">
         <Icon name="loader" size={24} spinning={true} />
         <span>Cargando tareas...</span>
       </div>
     {:else if $taskListStore.error}
-      <div class="state-message error">
+      <div class="state-placeholder error">
         <Icon name="alert-triangle" size={24} />
         <span>Error al cargar tareas: {$taskListStore.error}</span>
       </div>
     {:else if $taskListStore.tasks.length === 0}
-      <div class="state-message">
+      <div class="state-placeholder">
         <Icon name="check-circle" size={24} />
         <span>¡Excelente! No tienes tareas pendientes.</span>
       </div>
@@ -58,7 +53,7 @@
                 </div>
             </div>
             <div class="task-actions">
-              <button class="manage-btn" on:click={() => handleManageTask(task)} use:tooltip={'Gestionar esta tarea'}>
+              <button class="manage-btn" on:click={() => taskDetailStore.show(task)}>
                 <Icon name="arrow-right-circle" size={16}/>
                 Gestionar Tarea
               </button>
@@ -82,7 +77,7 @@
   flex-direction: column;
 }
 
-.state-message {
+.state-placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -95,7 +90,7 @@
   border: 2px dashed var(--border-color);
   border-radius: 12px;
 }
-.state-message.error {
+.state-placeholder.error {
   color: #c53030;
   background-color: #f5656520;
 }

@@ -1,20 +1,52 @@
-import { get } from './apiService';
+import { get, post } from './apiService'; // Import 'post'
 import type { ProcessInstance } from '$lib/types';
+
+// Interface for the payload to create a new process instance
+interface CreateInstancePayload {
+  businessProcessKey: string;
+  description: string;
+  businessData: Record<string, any>;
+}
+
+// Interface for the response after creating an instance
+interface CreateInstanceResponse {
+  processInstanceId: number;
+  status: string;
+  message: string;
+}
 
 class ProcessInstanceService {
   /**
-   * Fetches the detailed information for a specific process instance.
-   * @param instanceId The ID of the process instance to fetch.
-   * @returns A promise that resolves to the detailed process instance object.
+   * Creates a new instance of a process.
+   * @param payload The data required to start the process.
+   * @returns A promise that resolves to the response from the server.
    */
+  async createInstance(payload: CreateInstancePayload): Promise<CreateInstanceResponse> {
+    try {
+      const response = await post<CreateInstanceResponse>('/process-instances', payload);
+      return response;
+    } catch (error) {
+      console.error('Failed to create process instance:', error);
+      throw error;
+    }
+  }
+
+  async getAllInstances(): Promise<ProcessInstance[]> {
+    try {
+      const instances = await get<ProcessInstance[]>('/process-instances');
+      return instances;
+    } catch (error) {
+      console.error('Failed to fetch process instances:', error);
+      throw error;
+    }
+  }
+
   async getInstanceDetails(instanceId: number): Promise<ProcessInstance> {
     try {
-      // The path is constructed using the instanceId
       const instanceDetails = await get<ProcessInstance>(`/process-instances/${instanceId}`);
       return instanceDetails;
     } catch (error) {
       console.error(`Failed to fetch details for process instance ${instanceId}:`, error);
-      // Re-throw the error to be handled by the store or component
       throw error;
     }
   }
