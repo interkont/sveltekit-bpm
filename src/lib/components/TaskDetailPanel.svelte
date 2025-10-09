@@ -13,7 +13,7 @@
     let activeTab: 'form' | 'details' = 'form';
     let selectedAction: string = '';
     let comments: string = '';
-    let formData: Record<string, any> = {}; // Renamed from businessData to be more specific
+    let formData: Record<string, any> = {};
     let isSubmitting = false;
 
     // --- Reactive variables derived from the store state ---
@@ -24,15 +24,11 @@
     $: timeline = processInstance ? mapTimeline(processInstance) : [];
     $: commentsData = processInstance ? mapComments(processInstance.taskInstances) : [];
     $: documentsData = [] as DocumentGroup[];
-    // This variable is for displaying the read-only process data
-    $: businessDataDisplay = processInstance ? mapBusinessData(processInstance.businessData) : [];
-
 
     // When the form definition loads, initialize the formData for editable fields
     $: if (formDefinition) {
       formData = {};
       formDefinition.fields.forEach(field => {
-        // Only add non-readonly fields to the data we can submit
         if (!field.validations.isReadonly) {
           formData[field.name] = field.value ?? '';
         }
@@ -49,14 +45,6 @@
             { label: 'Fecha de Inicio', value: new Date(instance.startTime).toLocaleString(), icon: 'calendar' },
             { label: 'Estado del Proceso', value: instance.status, icon: 'activity' },
         ];
-    }
-
-    function mapBusinessData(data: Record<string, any>): BusinessDataItem[] {
-        if (!data) return [];
-        return Object.entries(data).map(([key, value]) => ({
-            label: key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()),
-            value: String(value)
-        }));
     }
 
     function mapTimeline(instance: ProcessInstance): TimelineStep[] {
@@ -138,9 +126,9 @@
     <header class="panel-header">
       {#if task}
         <div>
-          <span class="header-subtitle">Gestionando Tarea</span>
+          <span class="header-subtitle">Gestionando Tarea ID: {task.taskId}</span>
           <h2 title={task.taskName}>{task.taskName}</h2>
-          <p>del Proceso: {task.processName}</p>
+          <p>del Proceso: {task.processName} (Instancia ID: {task.processInstanceId})</p>
         </div>
       {/if}
       <button class="close-btn" on:click={taskDetailStore.hide} title="Cerrar panel">
@@ -195,14 +183,18 @@
                         <section class="info-section">
                             <h3><Icon name="info" size={16}/> Datos del Proceso</h3>
                             <div class="form-placeholder-details">
-                                {#each businessDataDisplay as field}
-                                <div class="form-field">
-                                    <label>{field.label}</label>
-                                    <div class="value-box">
-                                    {field.value}
-                                    </div>
-                                </div>
-                                {/each}
+                                {#if processInstance.businessDataFields && processInstance.businessDataFields.length > 0}
+                                    {#each processInstance.businessDataFields as field}
+                                        <div class="form-field">
+                                            <label>{field.label}</label>
+                                            <div class="value-box">
+                                            {field.value}
+                                            </div>
+                                        </div>
+                                    {/each}
+                                {:else}
+                                    <p class="no-data-placeholder">No hay datos de negocio para esta instancia.</p>
+                                {/if}
                             </div>
                         </section>
 
@@ -285,14 +277,18 @@
                             <section class="info-section">
                                 <h3><Icon name="file-text" size={16}/> Datos del Proceso</h3>
                                 <div class="form-placeholder-details">
-                                    {#each businessDataDisplay as field}
-                                    <div class="form-field">
-                                        <label>{field.label}</label>
-                                        <div class="value-box">
-                                        {field.value}
-                                        </div>
-                                    </div>
-                                    {/each}
+                                    {#if processInstance.businessDataFields && processInstance.businessDataFields.length > 0}
+                                        {#each processInstance.businessDataFields as field}
+                                            <div class="form-field">
+                                                <label>{field.label}</label>
+                                                <div class="value-box">
+                                                {field.value}
+                                                </div>
+                                            </div>
+                                        {/each}
+                                    {:else}
+                                        <p class="no-data-placeholder">No hay datos de negocio para esta instancia.</p>
+                                    {/if}
                                 </div>
                             </section>
                             <section class="info-section">
@@ -385,10 +381,9 @@
 
 .panel-content-full { flex-grow: 1; overflow-y: auto; padding: 2rem; }
 
-/* Layout del formulario actualizado a 2 columnas */
 .form-content {
     display: grid;
-    grid-template-columns: 1fr 380px; /* Columna principal y columna de acciones/contexto */
+    grid-template-columns: 1fr 380px;
     gap: 2rem;
     height: 100%;
 }
@@ -427,6 +422,9 @@
     white-space: pre-wrap; 
     word-wrap: break-word;
 }
+.action-section {
+    margin-top: auto;
+}
 .form-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: auto; padding-top: 1rem; }
 button { cursor: pointer; font-weight: 500; padding: 0.75rem 1.5rem; border-radius: 8px; border: 1px solid transparent; }
 .cancel-btn { background-color: var(--bg-secondary); color: var(--text-primary); border-color: var(--border-color); }
@@ -459,8 +457,19 @@ button { cursor: pointer; font-weight: 500; padding: 0.75rem 1.5rem; border-radi
 .task-name { font-weight: 600; margin: 0.5rem 0 0.25rem; }
 .user-info { font-size: 0.85rem; color: var(--text-secondary); }
 .status-in_progress .task-name { color: var(--accent-color); }
-.comments-section { display: flex; flex-direction: column; gap: 1.5rem; }
-.no-data-placeholder { font-style: italic; color: var(--text-secondary); text-align: center; padding: 2rem; background-color: var(--bg-primary); border-radius: 8px; }
+.comments-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+.no-data-placeholder {
+    font-style: italic;
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 2rem;
+    background-color: var(--bg-primary);
+    border-radius: 8px;
+}
 .comment-bubble { display: flex; gap: 1rem; }
 .comment-avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; background-color: var(--accent-color); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
 .comment-content { background-color: var(--bg-primary); padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border-color); width: 100%; }

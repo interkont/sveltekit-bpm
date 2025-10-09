@@ -24,20 +24,23 @@ class AuthService {
    */
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
     try {
-      // The path should start from the resource, not with /api again.
       const response = await post<LoginResponse>('/auth/login', credentials);
       
       if (response.token && response.user) {
-        // Set the token in our apiService for all subsequent requests
+        // --- DATA TRANSFORMATION ---
+        // To minimize impact on existing components, we transform the incoming `roles` array
+        // into the `processRoles` array of strings that components expect.
+        const userForStore: User = {
+          ...response.user,
+          processRoles: response.user.roles.map(role => role.name)
+        };
+
         setAuthToken(response.token);
+        authStore.set({ user: userForStore, token: response.token });
         
-        // Update the auth store with the logged-in user's data and token
-        authStore.set({ user: response.user, token: response.token });
-        
-        // For persistence across page reloads, save the token and user to localStorage
         if (typeof window !== 'undefined') {
           localStorage.setItem('authToken', response.token);
-          localStorage.setItem('user', JSON.stringify(response.user));
+          localStorage.setItem('user', JSON.stringify(userForStore));
         }
       }
       
@@ -46,7 +49,6 @@ class AuthService {
       // On failure, ensure the auth state is cleared
       this.logout();
       console.error('Login failed in authService:', error);
-      // Re-throw the error to be handled by the UI component
       throw error;
     }
   }
@@ -64,9 +66,7 @@ class AuthService {
   }
 
   /**
-   * Checks for an existing session (e.g., on page load)
-   * by looking for a token and user data in localStorage.
-   * This should be called once when the app initializes (e.g., in a root +layout.svelte).
+   * Checks for an existing session on page load.
    */
   initializeAuth() {
     if (typeof window !== 'undefined') {
@@ -79,7 +79,6 @@ class AuthService {
           setAuthToken(token);
           authStore.set({ user, token });
         } catch (e) {
-          // If parsing fails, the data is corrupt, so log out
           this.logout();
         }
       }

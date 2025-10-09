@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { userStore } from '$lib/stores/userStore';
   import { processRoleStore } from '$lib/stores/processRoleStore';
   import Icon from '$lib/components/Icon.svelte';
@@ -19,9 +20,13 @@
   let selectedRole: ProcessRole | {} | null = null;
   let roleForAddingMembers: ProcessRole | null = null;
 
-  $: filteredUsers = $userStore.filter(
+  onMount(() => {
+    userStore.fetchUsers();
+  });
+
+  $: filteredUsers = $userStore.users.filter(
     user =>
-      user.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -59,15 +64,6 @@
   function handleCloseRolePanel() {
     selectedRole = null;
   }
-
-  // Tailwind classes for process role tags
-  const tagColors = [
-    'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100',
-    'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100',
-    'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100',
-    'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-100',
-    'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100',
-  ];
 </script>
 
 <div class="view-container">
@@ -100,78 +96,90 @@
   <Tabs items={tabItems} on:tabChange={handleTabChange} />
 
   <div class="view-content">
-    {#if activeTab === 'Gestión de Usuarios'}
-      <div class="user-management-content" transition:slide|local>
-        <div class="table-toolbar">
-           <div class="search-container">
-            <div class="search-icon">
-              <Icon name="search" size={20}/>
+    {#if $userStore.loading}
+      <div class="state-placeholder">
+        <Icon name="loader" size={24} spinning={true} />
+        <span>Cargando usuarios...</span>
+      </div>
+    {:else if $userStore.error}
+      <div class="state-placeholder error">
+        <Icon name="alert-triangle" size={24} />
+        <span>Error al cargar usuarios: {$userStore.error}</span>
+      </div>
+    {:else}
+      {#if activeTab === 'Gestión de Usuarios'}
+        <div class="user-management-content" transition:slide|local>
+          <div class="table-toolbar">
+            <div class="search-container">
+              <div class="search-icon">
+                <Icon name="search" size={20}/>
+              </div>
+              <input
+                type="text"
+                class="search-input"
+                placeholder="Buscar por nombre o correo..."
+                bind:value={searchTerm}
+              />
             </div>
-            <input
-              type="text"
-              class="search-input"
-              placeholder="Buscar por nombre o correo..."
-              bind:value={searchTerm}
-            />
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead class="table-header">
+                <tr>
+                  <th>Nombre</th>
+                  <th>Rol de Sistema</th>
+                  <th>Roles de Proceso</th>
+                  <th class="text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="table-body">
+                {#each filteredUsers as user (user.id)}
+                  <tr class="table-row">
+                    <td class="cell-primary">
+                      <div class="user-info">
+                          <img class="user-avatar" src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}&background=random`} alt="Avatar de {user.fullName}" />
+                          <div>
+                            <div class="list-name flex items-center">
+                              {user.fullName}
+                              {#if user.status === 'pending'}
+                                <span class="ml-3 px-2 py-px text-xs font-semibold rounded-full uppercase bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">Pendiente</span>
+                              {/if}
+                            </div>
+                            <div class="text-secondary">{user.email}</div>
+                          </div>
+                        </div>
+                    </td>
+                    <td>
+                      <span class="px-2 py-px text-xs font-semibold rounded-full uppercase {user.systemRole.toLowerCase() === 'admin' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100' : 'bg-purple-100 text-purple-800 dark:bg-purple-700 dark:text-purple-300'}">
+                        {user.systemRole}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="tag-list">
+                        {#each user.processRoles as roleName, i}
+                          <span class="px-2 py-px text-xs font-semibold rounded-full uppercase bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-300">{roleName}</span>
+                        {/each}
+                      </div>
+                    </td>
+                    <td class="text-center">
+                      <button class="btn px-6 py-2 border-2 border-indigo-400 rounded-lg bg-indigo-400/10 hover:shadow-lg text-indigo-600 dark:text-indigo-300" on:click={() => handleSelectUser(user)} title="Editar usuario">
+                        Editar
+                      </button>
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
           </div>
         </div>
+      {/if}
 
-        <div class="table-container">
-          <table class="data-table">
-            <thead class="table-header">
-              <tr>
-                <th>Nombre</th>
-                <th>Rol de Sistema</th>
-                <th>Roles de Proceso</th>
-                <th class="text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody class="table-body">
-              {#each filteredUsers as user (user.uid)}
-                <tr class="table-row">
-                  <td class="cell-primary">
-                     <div class="user-info">
-                        <img class="user-avatar" src={user.avatarUrl} alt="Avatar de {user.displayName}" />
-                        <div>
-                          <div class="list-name flex items-center">
-                            {user.displayName}
-                            {#if user.status === 'pending'}
-                              <span class="ml-3 px-2 py-px text-xs font-semibold rounded-full uppercase bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">Pendiente</span>
-                            {/if}
-                          </div>
-                          <div class="text-secondary">{user.email}</div>
-                        </div>
-                      </div>
-                  </td>
-                  <td>
-                    <span class="px-2 py-px text-xs font-semibold rounded-full uppercase {user.systemRole === 'admin' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100' : 'bg-purple-100 text-purple-800 dark:bg-purple-700 dark:text-purple-300'}">
-                      {user.systemRole}
-                    </span>
-                  </td>
-                   <td>
-                    <div class="tag-list">
-                      {#each user.processRoles as role, i}
-                        <span class="px-2 py-px text-xs font-semibold rounded-full uppercase bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-300">{processRoleNameMap[role] || role}</span>
-                      {/each}
-                    </div>
-                  </td>
-                  <td class="text-center">
-                    <button class="btn px-6 py-2 border-2 border-indigo-400 rounded-lg bg-indigo-400/10 hover:shadow-lg text-indigo-600 dark:text-indigo-300" on:click={() => handleSelectUser(user)} title="Editar usuario">
-                      Editar
-                    </button>
-                  </td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
+      {#if activeTab === 'Gestión de Roles'}
+        <div transition:slide|local>
+          <RoleManagementContent on:addmember={handleOpenAddMemberPanel} on:editrole={handleSelectRole} />
         </div>
-      </div>
-    {/if}
-
-    {#if activeTab === 'Gestión de Roles'}
-      <div transition:slide|local>
-        <RoleManagementContent on:addmember={handleOpenAddMemberPanel} />
-      </div>
+      {/if}
     {/if}
   </div>
 </div>
@@ -236,6 +244,23 @@
 
   .view-content {
     flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .state-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1;
+    gap: 1rem;
+    color: var(--text-secondary);
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+  }
+  .state-placeholder.error {
+    color: #c53030;
+    background-color: #f5656520;
   }
 
   .user-management-content {

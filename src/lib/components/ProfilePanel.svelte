@@ -6,14 +6,12 @@
   import Icon from '$lib/components/Icon.svelte';
   import { authStore } from '$lib/stores/authStore';
   import { authService } from '$lib/services/authService';
-  import { processRoleStore } from '$lib/stores/processRoleStore';
-  import type { ProcessRole } from '$lib/types';
 
   const dispatch = createEventDispatcher<{
     submit: { name: string; email: string };
   }>();
 
-  // Estado local para el formulario y la información del usuario
+  // Estado local para el formulario
   let formData = { 
     name: $authStore.user?.fullName || '', 
     email: $authStore.user?.email || '' 
@@ -21,31 +19,9 @@
   let currentPassword = '';
   let newPassword = '';
   let confirmPassword = '';
-  let processRoles: ProcessRole[] = [];
-
-  // Suscribirse a los roles de proceso para obtener sus nombres
-  processRoleStore.subscribe(value => {
-    processRoles = value;
-  });
-
-  // Tailwind classes for process role tags
-  const tagColors = [
-    'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100',
-    'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100',
-    'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100',
-    'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-100',
-    'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100',
-  ];
-  // Helper para obtener el nombre de un rol a partir de su clave
-  function getRoleName(roleKey: string): string {
-    const role = processRoles.find(r => r.key === roleKey);
-    return role ? role.name : roleKey;
-  }
 
   function handleSubmit() {
-    // Aquí se podría actualizar el userStore antes de enviar
     dispatch('submit', { name: formData.name, email: formData.email });
-    // Idealmente, también se actualizaría el userStore aquí.
   }
 
   function handleLogout() {
@@ -116,19 +92,14 @@
         <h3>Tus Roles</h3>
         <div class="form-field">
             <label>Rol de Sistema</label>
-            <!-- Nota: La respuesta del login no incluye el nombre del rol, solo el roleId.
-                 Para mostrar el nombre, necesitaríamos un store de roles o que la API lo devuelva.
-                 Por ahora, mostramos el ID o un nombre genérico. -->
-            <span class="px-2 py-px text-xs font-semibold rounded-full uppercase {$authStore.user.roleId === 1 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100' : 'bg-purple-100 text-purple-800 dark:bg-purple-700 dark:text-purple-300'}">
-              {$authStore.user.roleId === 1 ? 'Admin' : 'User'}
-            </span>
+            <span class="px-2 py-px text-xs font-semibold rounded-full uppercase {$authStore.user.systemRole.toLowerCase() === 'admin' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100' : 'bg-purple-100 text-purple-800 dark:bg-purple-700 dark:text-purple-300'}">{$authStore.user.systemRole}</span>
         </div>
         <div class="form-field">
             <label>Roles de Proceso</label>
             {#if $authStore.user.processRoles && $authStore.user.processRoles.length > 0}
                 <div class="role-badge-group">
-                    {#each $authStore.user.processRoles as roleKey}
-                        <span class="px-2 py-px text-xs font-semibold rounded-full uppercase bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-300">{getRoleName(roleKey)}</span>
+                    {#each $authStore.user.processRoles as roleName}
+                        <span class="px-2 py-px text-xs font-semibold rounded-full uppercase bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-300">{roleName}</span>
                     {/each}
                 </div>
             {:else}

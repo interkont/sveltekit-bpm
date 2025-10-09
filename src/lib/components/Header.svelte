@@ -31,13 +31,12 @@
 		
 		<div class="w-px h-6 bg-[var(--border-color)]"></div>
 
-		<!-- --- 3. Usar directamente el authStore en el HTML --- -->
 		{#if $authStore.user}
 			<div class="user-profile" on:click={() => profilePanelStore.set(true)} title="Gestionar Perfil">
 				<img src={$authStore.user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent($authStore.user.fullName)}&background=random`} alt="Avatar de usuario">
 				<div class="user-info">
 					<span class="user-name">{$authStore.user.fullName}</span>
-					<span class="user-role">{$authStore.user.roleId}</span> <!-- Asumiendo que roleId es suficiente por ahora -->
+					<span class="user-role">{$authStore.user.systemRole}</span>
 				</div>
 			</div>
 		{/if}

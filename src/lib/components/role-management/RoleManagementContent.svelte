@@ -15,23 +15,21 @@
     members: User[];
   };
 
-  // Variable reactiva que primero filtra los roles y luego les añade los miembros
+  // The logic now correctly derives from the async userStore
   $: filteredRolesWithMembers = $processRoleStore
     .filter((role) => {
       const term = searchTerm.toLowerCase();
       const nameMatch = role.name.toLowerCase().includes(term);
-      // Comprobación de seguridad para la descripción
       const descriptionMatch = role.description ? role.description.toLowerCase().includes(term) : false;
       return nameMatch || descriptionMatch;
     })
     .map((role) => {
-      const members = $userStore.filter((user) =>
-        user.processRoles.includes(role.key)
+      const members = $userStore.users.filter((user) =>
+        user.processRoles?.includes(role.key)
       );
       return { role, members };
     });
 
-  // Despachamos el evento para abrir el panel de gestión
   function handleManageMembers(role: ProcessRole) {
     dispatch('addmember', { role });
   }
@@ -78,12 +76,12 @@
             <td>
               <div class="avatar-stack">
                 {#if members.length > 0}
-                  {#each members.slice(0, 6) as member (member.uid)}
+                  {#each members.slice(0, 6) as member (member.id)}
                     <img
                       class="user-avatar-small" 
-                      src={member.avatarUrl}
-                      alt={member.displayName}
-                      title={member.displayName}
+                      src={member.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.fullName)}&background=random`}
+                      alt={member.fullName}
+                      title={member.fullName}
                     />
                   {/each}
                   {#if members.length > 6}
@@ -109,10 +107,6 @@
 </div>
 
 <style>
-  /* 
-    Todos los estilos principales (.data-table, .search-input, etc.) 
-    se heredan ahora desde el archivo global app.css para asegurar la consistencia. 
-  */
   .table-toolbar {
     margin-bottom: 1.5rem;
   }
@@ -129,7 +123,6 @@
     align-items: center;
   }
 
-  /* Avatares más pequeños específicos para esta vista de lista */
   .user-avatar-small {
     width: 32px;
     height: 32px;

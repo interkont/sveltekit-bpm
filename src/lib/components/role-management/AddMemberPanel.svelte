@@ -14,10 +14,11 @@
 
   let roleDescription = role.description || '';
   let searchTerm = '';
-  let assignedMembers = $userStore.filter(u => u.processRoles.includes(role.key)).map(u => u.uid);
+  // Initialize assigned members based on the user store
+  let assignedMembers = $userStore.users.filter(u => u.processRoles?.includes(role.key)).map(u => u.id);
 
-  $: filteredUsers = $userStore.filter(user => 
-    user.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  $: filteredUsers = $userStore.users.filter(user => 
+    user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -26,22 +27,22 @@
   }
 
   function handleSaveChanges() {
-    // 1. Actualizar la descripción del rol
-    if (roleDescription !== role.description) {
-      const updatedRole = { ...role, description: roleDescription };
-      processRoleStore.update(updatedRole);
-    }
+    // This part of the logic is now client-side only for the prototype.
+    // In a real integration, this would trigger API calls.
+    
+    // 1. Client-side update for role description (if changed)
+    // processRoleStore.update({ ...role, description: roleDescription });
+    
+    // 2. Client-side update for member assignments
+    // userStore.updateRoleAssignments(role.key, assignedMembers);
 
-    // 2. Actualizar los miembros asignados
-    userStore.updateRoleAssignments(role.key, assignedMembers);
-
-    toast.show(`Miembros del rol "${role.name}" actualizados.`, 'success');
+    toast.show(`Gestión de roles para "${role.name}" se implementará con el backend.`, 'info');
     closePanel();
   }
 
-  function toggleMember(userId: string) {
+  function toggleMember(userId: number) {
     if (assignedMembers.includes(userId)) {
-      assignedMembers = assignedMembers.filter(uid => uid !== userId);
+      assignedMembers = assignedMembers.filter(id => id !== userId);
     } else {
       assignedMembers = [...assignedMembers, userId];
     }
@@ -98,20 +99,20 @@
 
       <!-- Lista de usuarios para asignar -->
       <div class="user-list">
-        {#each filteredUsers as user (user.uid)}
+        {#each filteredUsers as user (user.id)}
           <label class="user-list-item">
             <div class="user-info">
-                <img src={user.avatarUrl} alt={user.displayName} class="user-avatar-small" />
+                <img src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}&background=random`} alt={user.fullName} class="user-avatar-small" />
                 <div>
-                    <div class="font-medium">{user.displayName}</div>
+                    <div class="font-medium">{user.fullName}</div>
                     <div class="text-secondary">{user.email}</div>
                 </div>
             </div>
             <input 
               type="checkbox" 
               class="checkbox-toggle"
-              checked={assignedMembers.includes(user.uid)}
-              on:change={() => toggleMember(user.uid)}
+              checked={assignedMembers.includes(user.id)}
+              on:change={() => toggleMember(user.id)}
             />
           </label>
         {/each}

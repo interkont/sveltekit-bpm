@@ -49,7 +49,12 @@
                 </div>
                 <div>
                     <h3>{task.taskName}</h3>
-                    <p><strong>Proceso:</strong> {task.processName} (Iniciado por: {task.processStartedBy})</p>
+                    <p class="process-description">{task.processDescription}</p>
+                    <p class="process-meta">
+                        <strong>Proceso:</strong> {task.processName} (V{task.processVersion}) - 
+                        <strong>Instancia ID:</strong> {task.processInstanceId} - 
+                        Iniciado por: {task.processStartedBy}
+                    </p>
                 </div>
             </div>
             <div class="task-actions">
@@ -136,6 +141,8 @@
 
 .task-info h3 { margin: 0 0 0.25rem 0; font-size: 1.125rem; }
 .task-info p { margin: 0; font-size: 0.9rem; color: var(--text-secondary); }
+.process-description { font-style: italic; margin-bottom: 0.5rem !important; }
+.process-meta { font-size: 0.8rem !important; }
 
 .manage-btn {
   display: flex; align-items: center; gap: 0.5rem;

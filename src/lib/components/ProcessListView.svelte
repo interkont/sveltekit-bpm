@@ -22,8 +22,6 @@
     activeTab = tab;
   }
   
-  // The logic for showing details is now handled by the processDetailStore,
-  // which will fetch the data. We just need to pass the ID.
   function handleShowDetail(processId: number) {
     processDetailStore.show(processId);
   }
@@ -74,6 +72,7 @@
               <div class="process-icon"><Icon name="cpu" size={24}/></div>
               <div>
                 <h3 class="process-name">{process.processDefinition.name} (ID: {process.id})</h3>
+                <p class="process-description">{process.description}</p>
                 <span class="process-meta">Iniciado por <strong>{process.startedByUser.fullName}</strong> el {new Date(process.startTime).toLocaleDateString()}</span>
               </div>
             </div>
@@ -135,14 +134,16 @@
 .process-info { display: flex; align-items: center; gap: 1rem; }
 .process-icon {
   width: 48px; height: 48px; border-radius: 50%;
-  background-color: var(--accent-color-light, #ebf8ff); color: var(--accent-color);
+  background-color: var(--accent-color-light, #ebf4ff); color: var(--accent-color);
   display: flex; align-items: center; justify-content: center;
 }
-.process-name { font-size: 1.125rem; margin: 0; }
-.process-meta { font-size: 0.9rem; color: var(--text-secondary); }
+.process-name { font-size: 1.125rem; margin: 0 0 0.25rem 0; }
+.process-description { font-size: 0.9rem; color: var(--text-secondary); margin: 0 0 0.5rem 0; font-style: italic; }
+.process-meta { font-size: 0.8rem; color: var(--text-secondary); }
 .process-status span {
   background-color: #e6fffa; color: #234e52;
   padding: 0.25rem 0.75rem; border-radius: 99px; font-weight: 500;
+  white-space: nowrap;
 }
 .details-btn {
   display: flex; align-items: center; gap: 0.5rem;

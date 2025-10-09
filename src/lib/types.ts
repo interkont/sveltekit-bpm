@@ -1,15 +1,22 @@
 // --- Tipos de Datos Principales (Nombres) ---
 
+export interface Role {
+    id: number;
+    name: string;
+    description?: string;
+}
+
 export interface User {
     id: number;
     uid?: string;
     fullName: string;
     email: string;
-    roleId?: number;
-    systemRole?: 'admin' | 'user'; 
-    processRoles?: string[];
-    avatarUrl?: string;
     status?: 'ACTIVE' | 'PENDING';
+    createdAt: string;
+    systemRole: string; // <-- CAMBIO CLAVE
+    roles: Role[];      // <-- CAMBIO CLAVE
+    processRoles?: string[]; // Mantenido para transformación de datos
+    avatarUrl?: string;
 }
 
 export interface ProcessRole {
@@ -41,6 +48,7 @@ export interface ProcessInstance {
     description: string;
     status: string;
     businessData: Record<string, any>;
+    businessDataFields?: FormFieldDefinition[];
     startedByUserId: number;
     startTime: string;
     endTime: string | null;
@@ -61,10 +69,13 @@ export interface ProcessInstance {
     taskInstances?: ProcessTaskInstance[];
 }
 
+// Tarea principal para la lista / bandeja de entrada
 export interface Task {
     taskId: number;
     taskName: string;
     processInstanceId: number;
+    processDescription: string;
+    processVersion: number;
     processName: string;
     processStartedBy: string;
     createdAt: string;
@@ -98,7 +109,7 @@ export interface FormFieldDefinition {
     label: string;
     fieldType: 'TEXT' | 'NUMBER' | 'TEXTAREA' | 'DATE';
     value: string | number | null;
-    validations: {
+    validations?: {
         isRequired: boolean;
         isReadonly: boolean;
     };
@@ -110,7 +121,7 @@ export interface StartFormDefinition {
     actions: string[];
 }
 
-export interface TaskFormDefinition extends StartFormDefinition {} // Es la misma estructura
+export interface TaskFormDefinition extends StartFormDefinition {}
   
 // --- (El resto de los tipos de UI se mantienen igual) ---
   

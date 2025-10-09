@@ -4,19 +4,18 @@
   import { processDetailStore } from '$lib/stores/processDetailStore';
   import Icon from '$lib/components/Icon.svelte';
   
-  import type { ProcessInstance, TimelineStep, TimelineStatus, GeneralInfoItem, BusinessDataItem, Comment, DocumentGroup } from '$lib/types';
+  import type { ProcessInstance, TimelineStep, TimelineStatus, GeneralInfoItem, Comment, DocumentGroup } from '$lib/types';
 
   let activeTab: 'details' | 'comments' | 'documents' = 'details';
 
   // --- Reactive variables derived from the store ---
   $: processInstance = $processDetailStore.process;
   $: generalInfo = processInstance ? mapGeneralInfo(processInstance) : [];
-  $: businessData = processInstance ? mapBusinessData(processInstance.businessData) : [];
   $: timeline = processInstance ? mapTimeline(processInstance) : [];
   $: commentsData = processInstance ? mapComments(processInstance.taskInstances || []) : [];
   $: documentsData = [] as DocumentGroup[]; // Placeholder
 
-  // --- Helper functions (identical to TaskDetailPanel) ---
+  // --- Helper functions ---
   function mapGeneralInfo(instance: ProcessInstance): GeneralInfoItem[] {
       return [
           { label: 'Solicitado por', value: instance.startedByUser.fullName, icon: 'user' },
@@ -24,14 +23,6 @@
           { label: 'Fecha de Inicio', value: new Date(instance.startTime).toLocaleString(), icon: 'calendar' },
           { label: 'Estado Actual', value: instance.status, icon: 'activity' },
       ];
-  }
-
-  function mapBusinessData(data: Record<string, any>): BusinessDataItem[] {
-      if (!data) return [];
-      return Object.entries(data).map(([key, value]) => ({
-          label: key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()),
-          value: String(value)
-      }));
   }
 
   function mapTimeline(instance: ProcessInstance): TimelineStep[] {
@@ -138,8 +129,6 @@
                     <p class="task-name">{step.taskName}</p>
                     {#if step.status === 'COMPLETED'}
                         <span class="user-info">Completado por <strong>{step.user}</strong> el {step.date}</span>
-                    {:else if step.status === 'IN_PROGRESS'}
-                        <span class="user-info">Tarea actual asignada a <strong>{step.user}</strong></span>
                     {/if}
                     </div>
                 </div>
@@ -165,14 +154,18 @@
             {#if activeTab === 'details'}
                 <div class="form-details-section">
                 <div class="form-placeholder">
-                    {#each businessData as field}
-                    <div class="form-field">
-                        <label>{field.label}</label>
-                        <div class="value-box">
-                        {field.value}
+                    {#if processInstance.businessDataFields && processInstance.businessDataFields.length > 0}
+                        {#each processInstance.businessDataFields as field}
+                        <div class="form-field">
+                            <label>{field.label}</label>
+                            <div class="value-box">
+                            {field.value}
+                            </div>
                         </div>
-                    </div>
-                    {/each}
+                        {/each}
+                    {:else}
+                        <p class="no-data-placeholder">No hay datos de negocio para esta instancia.</p>
+                    {/if}
                 </div>
                 </div>
             {:else if activeTab === 'comments'}
@@ -273,14 +266,12 @@
   border-radius: 99px;
 }
 
-/* Lista de Datos */
 .data-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 1rem; }
 .data-list li { display: flex; align-items: flex-start; gap: 0.75rem; }
 .data-icon { color: var(--accent-color); margin-top: 3px; }
 .data-list .label { display: block; font-size: 0.85rem; color: var(--text-secondary); }
 .data-list .value { font-weight: 500; color: var(--text-primary); }
 
-/* Timeline */
 .timeline { display: flex; flex-direction: column; }
 .timeline-item { display: flex; position: relative; }
 .timeline-connector { display: flex; flex-direction: column; align-items: center; margin-right: 1rem; }
@@ -298,7 +289,6 @@
 .user-info { font-size: 0.85rem; color: var(--text-secondary); }
 .status-in_progress .task-name { color: var(--accent-color); }
 
-/* Columna Derecha - Tabs */
 .right-column .tab-header { display: flex; border-bottom: 2px solid var(--border-color); margin-bottom: 1.5rem; flex-shrink: 0; }
 .right-column .tab-header button {
   display: flex; align-items: center; gap: 0.5rem; background: none; border: none;
@@ -318,7 +308,6 @@
     border-radius: 8px;
 }
 
-/* Sección de Detalles de Formulario */
 .form-details-section .form-placeholder { display: flex; flex-direction: column; gap: 1.5rem; }
 .form-field label { font-weight: 500; color: var(--text-primary); margin-bottom: 0.5rem; display: block; }
 .value-box {
@@ -327,7 +316,6 @@
   white-space: pre-wrap; word-wrap: break-word;
 }
 
-/* Sección de Comentarios */
 .comments-section { display: flex; flex-direction: column; gap: 1.5rem; }
 .comment-bubble { display: flex; gap: 1rem; }
 .comment-avatar {
@@ -343,7 +331,6 @@
 .comment-header span { font-size: 0.8rem; color: var(--text-secondary); }
 .comment-content p { margin: 0; }
 
-/* Sección de Documentos */
 .documents-section h4 { color: var(--text-primary); margin: 0 0 1rem 0; }
 .file-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; }
 .file-list li {

@@ -1,22 +1,22 @@
-import { apiService } from './apiService';
-import type { User } from '../types';
+import { get, post } from './apiService';
+import type { User } from '$lib/types';
 
-export const userService = {
-  getUsers: async (): Promise<User[]> => {
+class UserService {
+  /**
+   * Fetches the list of all users in the system.
+   * @returns A promise that resolves to an array of users.
+   */
+  async getUsers(): Promise<User[]> {
     try {
-      const data = await apiService.get('/users');
-      return data as User[]; // Assuming the API returns an array of User objects
+      const users = await get<User[]>('/users');
+      return users;
     } catch (error) {
-      console.error('Error fetching users:', error);
-      // Depending on your error handling strategy, you might throw the error,
-      // return an empty array, or return a specific error object.
-      throw error; // Re-throw the error to be handled by the caller
+      console.error('Failed to fetch users:', error);
+      throw error;
     }
-  },
+  }
 
-  // You can add other user-related functions here, e.g.,
-  // getUserById: async (id: string): Promise<User> => { ... }
-  // createUser: async (userData: Omit<User, 'uid'>): Promise<User> => { ... }
-  // updateUser: async (id: string, userData: Partial<User>): Promise<User> => { ... }
-  // deleteUser: async (id: string): Promise<void> => { ... }
-};
+  // Future methods like createUser, updateUser, deleteUser will go here
+}
+
+export const userService = new UserService();
