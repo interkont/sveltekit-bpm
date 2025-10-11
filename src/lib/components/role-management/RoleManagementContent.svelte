@@ -2,36 +2,52 @@
   import { processRoleStore } from '$lib/stores/processRoleStore';
   import { userStore } from '$lib/stores/userStore';
   import Icon from '$lib/components/Icon.svelte';
-  import type { ProcessRole, User } from '$lib/types';
+  import type { ProcessRole } from '$lib/types';
   import { slide } from 'svelte/transition';
   import { createEventDispatcher } from 'svelte';
+  import { modal } from '$lib/stores/modal';
+  import { toast } from '$lib/stores/toast';
 
   const dispatch = createEventDispatcher();
 
   let searchTerm = '';
 
-  type RoleWithMembers = {
-    role: ProcessRole;
-    members: User[];
-  };
-
-  // The logic now correctly derives from the async userStore
-  $: filteredRolesWithMembers = $processRoleStore
-    .filter((role) => {
+  $: filteredRoles = $processRoleStore.roles.filter((role) => {
       const term = searchTerm.toLowerCase();
       const nameMatch = role.name.toLowerCase().includes(term);
       const descriptionMatch = role.description ? role.description.toLowerCase().includes(term) : false;
       return nameMatch || descriptionMatch;
-    })
-    .map((role) => {
-      const members = $userStore.users.filter((user) =>
-        user.processRoles?.includes(role.key)
-      );
-      return { role, members };
     });
 
-  function handleManageMembers(role: ProcessRole) {
-    dispatch('addmember', { role });
+  // Corrected reactive block
+  $: rolesWithFullMembers = filteredRoles.map(role => {
+      // For each role, we search the ENTIRE user list to find its members.
+      const members = $userStore.users.filter(user => 
+          // A user belongs to a role if the user's 'roles' array contains this role's id.
+          user.roles?.some(userRole => userRole.id === role.id)
+      );
+      // We return the original role object, but with the 'users' property injected.
+      return { ...role, users: members };
+  });
+
+  function handleEditRole(role: ProcessRole) {
+    dispatch('editrole', { role });
+  }
+
+  function handleDeleteRole(role: ProcessRole) {
+    modal.show({
+      title: 'Eliminar Rol',
+      message: `¿Estás seguro de que deseas eliminar el rol "${role.name}"?`,
+      onConfirm: async () => {
+        try {
+          await processRoleStore.deleteRole(role.id);
+          toast.show('Rol eliminado con éxito.', 'success');
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "An unexpected error occurred.";
+          toast.show(message, 'error');
+        }
+      },
+    });
   }
 </script>
 
@@ -61,7 +77,7 @@
         </tr>
       </thead>
       <tbody class="table-body">
-        {#each filteredRolesWithMembers as { role, members } (role.key)}
+        {#each rolesWithFullMembers as role (role.id)}
           <tr class="table-row">
             <td class="cell-primary">
               <div class="list-name">{role.name}</div>
@@ -70,13 +86,13 @@
             <td>
               <div class="member-count">
                 <Icon name="users" size={16} />
-                <span>{members.length}</span>
+                <span>{role.users?.length || 0}</span>
               </div>
             </td>
             <td>
               <div class="avatar-stack">
-                {#if members.length > 0}
-                  {#each members.slice(0, 6) as member (member.id)}
+                {#if role.users && role.users.length > 0}
+                  {#each role.users.slice(0, 6) as member (member.id)}
                     <img
                       class="user-avatar-small" 
                       src={member.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.fullName)}&background=random`}
@@ -84,9 +100,9 @@
                       title={member.fullName}
                     />
                   {/each}
-                  {#if members.length > 6}
+                  {#if role.users.length > 6}
                     <div class="user-avatar-small more">
-                      +{members.length - 6}
+                      +{role.users.length - 6}
                     </div>
                   {/if}
                 {:else}
@@ -95,9 +111,14 @@
               </div>
             </td>
             <td class="text-center">
-              <button class="btn px-6 py-2 border-2 border-indigo-400 rounded-lg bg-indigo-400/10 hover:shadow-lg text-indigo-600 dark:text-indigo-300" on:click={() => handleManageMembers(role)}>
-                Gestionar
-              </button>
+               <div class="flex items-center justify-center gap-2">
+                <button class="btn-icon" on:click={() => handleEditRole(role)} title="Editar rol">
+                  <Icon name="edit" />
+                </button>
+                <button class="btn-icon btn-icon-danger" on:click={() => handleDeleteRole(role)} title="Eliminar rol">
+                  <Icon name="x" />
+                </button>
+              </div>
             </td>
           </tr>
         {/each}
@@ -110,19 +131,16 @@
   .table-toolbar {
     margin-bottom: 1.5rem;
   }
-
   .member-count {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     font-weight: 500;
   }
-
   .avatar-stack {
     display: flex;
     align-items: center;
   }
-
   .user-avatar-small {
     width: 32px;
     height: 32px;
@@ -132,16 +150,13 @@
     margin-left: -12px;
     transition: transform 0.2s ease;
   }
-
   .user-avatar-small:first-child {
     margin-left: 0;
   }
-
   .user-avatar-small:hover {
     transform: translateY(-2px);
     z-index: 10;
   }
-
   .user-avatar-small.more {
     background-color: var(--bg-secondary);
     color: var(--text-primary);
@@ -154,9 +169,4 @@
   .text-center {
     text-align: center !important;
   }
-  :global(.rol-name) {
-    font-weight: 600;
-    color: var(--accent-color);
-  }
-
 </style>

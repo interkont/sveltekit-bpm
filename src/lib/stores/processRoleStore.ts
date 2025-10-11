@@ -1,41 +1,76 @@
-import { derived } from 'svelte/store';
-import { userStore } from './userStore';
+import { writable } from 'svelte/store';
 import type { ProcessRole } from '$lib/types';
+import { processRoleService } from '$lib/services/processRoleService';
+import { userStore } from './userStore';
 
-/**
- * processRoleStore is now a derived store.
- * Its value is automatically calculated based on the userStore.
- * It extracts all unique process roles from the complete user list.
- */
-export const processRoleStore = derived<typeof userStore, ProcessRole[]>(
-  userStore,
-  ($userStore, set) => {
-    if ($userStore.loading) {
-      // While users are loading, we can provide an empty list
-      set([]);
-      return;
+interface ProcessRoleStoreState {
+  roles: ProcessRole[];
+  loading: boolean;
+  error: string | null;
+}
+
+const createProcessRoleStore = () => {
+  const { subscribe, set, update } = writable<ProcessRoleStoreState>({
+    roles: [],
+    loading: false,
+    error: null,
+
+  });
+
+  const fetchRoles = async () => {
+    update(state => ({ ...state, loading: true, error: null }));
+    try {
+      let rolesFromApi = await processRoleService.getRoles();
+      const roles = rolesFromApi.map(role => ({ ...role, key: role.name }));
+      set({ roles, loading: false, error: null });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'An unknown error occurred';
+      set({ roles: [], loading: false, error: message });
     }
+  };
 
-    const rolesMap = new Map<string, ProcessRole>();
+  const createRole = async (roleData: { name: string; description: string }) => {
+    update(state => ({ ...state, loading: true }));
+    try {
+      await processRoleService.createRole(roleData);
+      await fetchRoles(); // Refresh the list
+    } catch (error) {
+      update(state => ({ ...state, loading: false, error: error.message }));
+      throw error;
+    }
+  };
 
-    $userStore.users.forEach(user => {
-      // The user object from the API has a 'roles' array of objects
-      user.roles?.forEach(role => {
-        if (!rolesMap.has(role.name)) {
-          rolesMap.set(role.name, {
-            key: role.name, // Using name as key for simplicity as per original design
-            name: role.name,
-            description: role.description || `Users with the ${role.name} role`
-          });
-        }
-      });
-    });
-    
-    set(Array.from(rolesMap.values()));
-  },
-  [] // Initial value is an empty array
-);
+  const updateRole = async (roleId: number, roleData: { name?: string; description?: string; userIds?: number[] }) => {
+    update(state => ({ ...state, loading: true }));
+    try {
+      await processRoleService.updateRole(roleId, roleData);
+      await fetchRoles(); // 1. Refresh roles
+      await userStore.fetchUsers(); // 2. Refresh users to update their memberships
+    } catch (error) {
+      update(state => ({ ...state, loading: false, error: error.message }));
+      throw error;
+    }
+  };
 
-// NOTE: The manual manipulation methods (add, update, delete) for process roles
-// have been removed. This logic will now be handled by API calls and re-fetching users,
-// or by more advanced local data management in userStore if needed.
+  const deleteRole = async (roleId: number) => {
+    update(state => ({ ...state, loading: true }));
+    try {
+      await processRoleService.deleteRole(roleId);
+      await fetchRoles(); // 1. Refresh roles
+      await userStore.fetchUsers(); // 2. Refresh users
+    } catch (error) {
+      update(state => ({ ...state, loading: false, error: error.message }));
+      throw error;
+    }
+  };
+
+  return {
+    subscribe,
+    fetchRoles,
+    createRole,
+    updateRole,
+    deleteRole,
+  };
+};
+
+export const processRoleStore = createProcessRoleStore();

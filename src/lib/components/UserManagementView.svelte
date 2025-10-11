@@ -2,6 +2,8 @@
   import { onMount } from 'svelte';
   import { userStore } from '$lib/stores/userStore';
   import { processRoleStore } from '$lib/stores/processRoleStore';
+  import { modal } from '$lib/stores/modal';
+  import { toast } from '$lib/stores/toast';
   import Icon from '$lib/components/Icon.svelte';
   import Tabs from '$lib/components/layout/Tabs.svelte';
   import UserEditPanel from './UserEditPanel.svelte';
@@ -22,6 +24,7 @@
 
   onMount(() => {
     userStore.fetchUsers();
+    processRoleStore.fetchRoles();
   });
 
   $: filteredUsers = $userStore.users.filter(
@@ -31,7 +34,7 @@
   );
 
   // Derivación reactiva para mapear `role.key` a `role.name`
-  $: processRoleNameMap = $processRoleStore.reduce((acc, role) => {
+  $: processRoleNameMap = $processRoleStore.roles.reduce((acc, role) => {
     acc[role.key] = role.name;
     return acc;
   }, {} as { [key: string]: string });
@@ -39,14 +42,46 @@
   // --- Manejadores de eventos ---
   function handleTabChange(event: CustomEvent) {
     activeTab = event.detail.tab;
+
+    if (activeTab === 'Gestión de Roles') {
+      // console.log('--- Debug al hacer clic en Tab de Roles ---');
+      // console.log('Estado de userStore:', $userStore);
+      // console.log('Estado de processRoleStore:', $processRoleStore);
+      // console.log(`¿Hay usuarios? ${$userStore.users.length > 0}`, `¿Hay roles? ${$processRoleStore.roles.length > 0}`);
+    }
   }
 
-  function handleSelectUser(user: User | {}) {
-    selectedUser = user;
+  async function handleSelectUser(user: User | {}) {
+    if (!('id' in user) || !user.id) {
+      selectedUser = {};
+      return;
+    }
+    try {
+      const detailedUser = await userStore.fetchUserById(user.id);
+      selectedUser = detailedUser;
+    } catch (error) {
+      toast.show('No se pudieron cargar los detalles del usuario.', 'error');
+    }
   }
 
   function handleCloseUserPanel() {
     selectedUser = null;
+  }
+  
+  function handleDeleteUser(user: User) {
+    modal.show({
+      title: 'Eliminar Usuario',
+      message: `¿Estás seguro de que deseas eliminar a ${user.fullName}? Esta acción no se puede deshacer.`,
+      onConfirm: async () => {
+        try {
+          await userStore.deleteUser(user.id);
+          toast.show('Usuario eliminado con éxito.', 'success');
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'No se pudo eliminar el usuario';
+          toast.show(message, 'error');
+        }
+      },
+    });
   }
 
   function handleOpenAddMemberPanel(event: CustomEvent) {
@@ -57,8 +92,8 @@
     roleForAddingMembers = null;
   }
 
-  function handleSelectRole(role: ProcessRole | {}) {
-    selectedRole = role;
+  function handleSelectRole(event: CustomEvent) {
+    selectedRole = event.detail.role;
   }
 
   function handleCloseRolePanel() {
@@ -85,7 +120,7 @@
 
       <!-- Botón para añadir Rol -->
       {#if activeTab === 'Gestión de Roles'}
-        <button class="btn btn-primary" on:click={() => handleSelectRole({})}>
+        <button class="btn btn-primary" on:click={() => handleSelectRole({ detail: { role: {} } })}>
           <Icon name="plus" size={18} class="-ml-1 mr-2" />
           Agregar Rol
         </button>
@@ -96,15 +131,15 @@
   <Tabs items={tabItems} on:tabChange={handleTabChange} />
 
   <div class="view-content">
-    {#if $userStore.loading}
+    {#if ($userStore.loading && $userStore.users.length === 0) || ($processRoleStore.loading && $processRoleStore.roles.length === 0)}
       <div class="state-placeholder">
         <Icon name="loader" size={24} spinning={true} />
-        <span>Cargando usuarios...</span>
+        <span>Cargando datos...</span>
       </div>
-    {:else if $userStore.error}
+    {:else if $userStore.error || $processRoleStore.error}
       <div class="state-placeholder error">
         <Icon name="alert-triangle" size={24} />
-        <span>Error al cargar usuarios: {$userStore.error}</span>
+        <span>Error al cargar datos: {$userStore.error || $processRoleStore.error}</span>
       </div>
     {:else}
       {#if activeTab === 'Gestión de Usuarios'}
@@ -163,9 +198,14 @@
                       </div>
                     </td>
                     <td class="text-center">
-                      <button class="btn px-6 py-2 border-2 border-indigo-400 rounded-lg bg-indigo-400/10 hover:shadow-lg text-indigo-600 dark:text-indigo-300" on:click={() => handleSelectUser(user)} title="Editar usuario">
-                        Editar
-                      </button>
+                      <div class="flex items-center justify-center gap-2">
+                        <button class="btn-icon" on:click={() => handleSelectUser(user)} title="Editar usuario">
+                          <Icon name="edit" />
+                        </button>
+                        <button class="btn-icon btn-icon-danger" on:click={() => handleDeleteUser(user)} title="Eliminar usuario">
+                          <Icon name="x" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 {/each}
@@ -356,5 +396,29 @@
 
   .text-center {
     text-align: center !important;
+  }
+
+  .btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+  }
+  .btn-icon:hover {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+  .btn-icon-danger:hover {
+    color: #e53e3e; /* text-red-600 */
+    background-color: rgba(229, 62, 62, 0.1);
+  }
+  .gap-2 {
+    gap: 0.5rem;
   }
 </style>

@@ -180,3 +180,52 @@ Para validar el alistamiento del frontend y prepararlo mejor para interactuar co
     - **Impacto:** La vista de lista de modelos será más rápida. La vista de detalle/editor de modelos deberá invocar la nueva función para cargar el XML completo solo cuando se necesite.
 
 Estas modificaciones no cambian la estructura de datos esperada en el frontend, sino la forma en que se obtienen y manejan, alineándola más con la interacción con un sistema distribuido (backend). Una vez implementadas y validadas, servirán como base sólida para definir los requerimientos funcionales y técnicos del backend.
+
+## 10. Fase 2: Integración con Backend y Transición a Aplicación Funcional
+
+En esta fase, el proyecto ha evolucionado de ser un prototipo basado en maquetas a una aplicación web completamente funcional, conectada a un backend real de Node.js/Express.js. Se ha establecido una arquitectura de comunicación robusta y se han integrado las funcionalidades operacionales clave del MVP.
+
+### 10.1. Arquitectura de Comunicación y Entorno
+
+- **Conexión a Backend Real:** Se estableció una conexión exitosa con el backend desplegado en un entorno de previsualización de Firebase Studio.
+- **Resolución de CORS en Desarrollo:** Se implementó una solución de **proxy en Vite (`vite.config.ts`)** para resolver el bloqueo de dominios cruzados inherente al entorno de previsualización de Firebase Studio. Esto permite un desarrollo local fluido sin modificar la lógica de la aplicación para producción.
+- **Gestión de Entorno Centralizada:** Se consolidó el uso de archivos `.env` para gestionar las URLs del backend y las credenciales de autenticación (cookies) para el entorno de desarrollo, utilizando las convenciones de SvelteKit (`PUBLIC_...`) y Vite (`loadEnv`).
+- **Capa de Servicios de API:** Se implementó un `apiService.ts` robusto, responsable de todas las peticiones `fetch`. Este servicio centraliza la adición de cabeceras (como `Authorization` para el futuro), el manejo de respuestas y la **generación automática de notificaciones de error** para el usuario a través de un `toastStore`.
+
+### 10.2. Módulos Funcionales Integrados
+
+Los siguientes módulos ahora operan con datos 100% reales provenientes del backend:
+
+- **Ciclo de Autenticación Completo:**
+    - **Login:** El formulario de inicio de sesión se comunica con `POST /api/auth/login`, recibe un token JWT y los datos del usuario.
+    - **Gestión de Estado:** El `authStore` gestiona de forma reactiva el estado del usuario en toda la aplicación.
+    - **Persistencia de Sesión:** La sesión se restaura al recargar la página gracias al uso de `localStorage` y la función `initializeAuth`.
+    - **Logout:** La funcionalidad de cierre de sesión limpia el estado y el almacenamiento local, redirigiendo al usuario de forma segura.
+    - **UI Reactiva:** Los componentes principales (`Header`, `Sidebar`, `ProfilePanel`) reaccionan al estado de autenticación, mostrando la información del usuario conectado.
+
+- **Bandeja de Tareas (`Mis Tareas`):**
+    - La vista se alimenta del endpoint `GET /api/tasks/my-tasks`.
+    - Muestra una lista de tareas asignadas al usuario autenticado, incluyendo detalles como el nombre del proceso, la descripción y la versión.
+    - Gestiona estados de carga, error y cuando no hay tareas pendientes.
+
+- **Lista de Instancias de Proceso (`Instancias`):**
+    - La vista se alimenta del endpoint `GET /api/process-instances`.
+    - Muestra y filtra las instancias "En Ejecución" e "Históricas".
+    - Permite la navegación al detalle de cada instancia.
+
+- **Detalle de Instancia de Proceso:**
+    - Se activa al hacer clic en una tarea o en una instancia de la lista, llamando a `GET /api/process-instances/:id`.
+    - Muestra información general del proceso y los **Datos de Negocio** (`businessDataFields`) de forma dinámica, tal como los define el backend.
+    - **Trazabilidad:** Renderiza una línea de tiempo del proceso, extrayendo los nombres de las tareas y el orden directamente del array `taskInstances` de la respuesta.
+    - **Observaciones:** Muestra un historial de comentarios, extrayéndolos de cada `taskInstance`.
+
+- **Inicio de Nuevos Procesos:**
+    - La vista `NewProcessView` carga la lista de procesos que se pueden iniciar desde `GET /api/processes`.
+    - **Formulario de Inicio Dinámico:** Al seleccionar un proceso, se llama a `GET /api/processes/:id/start-form` para obtener la definición de los campos.
+    - El componente `StartProcessFormView` renderiza dinámicamente un formulario con soporte para campos `TEXT`, `NUMBER`, `DATE` y `TEXTAREA`, respetando las validaciones de `isRequired`.
+    - **Creación de Instancia:** El formulario, una vez validado y confirmado por el usuario, envía los datos a `POST /api/process-instances` para crear un nuevo caso.
+
+- **Ejecución de Tareas:**
+    - **Formulario de Tarea Dinámico:** Al abrir el panel de una tarea, se llama a `GET /api/tasks/:id/form` para obtener la definición del formulario.
+    - El `TaskDetailPanel` renderiza los campos del formulario, respetando los valores pre-poblados y el estado de solo lectura (`isReadonly`).
+    - **Completar Tarea:** El formulario permite al usuario seleccionar una acción y añadir comentarios, y envía la información al endpoint `POST /api/tasks/:id/complete` para avanzar el proceso.

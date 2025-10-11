@@ -13,16 +13,18 @@ export interface User {
     email: string;
     status?: 'ACTIVE' | 'PENDING';
     createdAt: string;
-    systemRole: string; // <-- CAMBIO CLAVE
-    roles: Role[];      // <-- CAMBIO CLAVE
-    processRoles?: string[]; // Mantenido para transformación de datos
+    systemRole: string;
+    roles: Role[];
+    processRoles?: string[];
     avatarUrl?: string;
 }
 
 export interface ProcessRole {
+    id: number; // <-- Added ID
     key: string; 
     name: string;
     description?: string;
+    users?: Partial<User>[]; // <-- Added optional users array
 }
 
 export interface ProcessTaskInstance {

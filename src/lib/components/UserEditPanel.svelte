@@ -8,19 +8,37 @@
   import { processRoleStore } from '$lib/stores/processRoleStore';
   import { toast } from '$lib/stores/toast';
   import { modal } from '$lib/stores/modal';
-  import { v4 as uuidv4 } from 'uuid';
 
   export let user: User | {} = {};
 
   const dispatch = createEventDispatcher();
-
-  let isNewUser = !('uid' in user);
-  let userData: Partial<User> = { ...user, processRoles: [...(user.processRoles || [])] };
-
-  let title = isNewUser ? 'Añadir Nuevo Usuario' : 'Editar Usuario';
-  let saveButtonText = isNewUser ? 'Enviar Invitación' : 'Guardar Cambios';
   
   let isRoleDropdownOpen = false;
+
+  let isNewUser: boolean;
+  let userData: Partial<User> = {};
+  let title: string;
+  let saveButtonText: string;
+
+  // This reactive block re-runs whenever the `user` prop changes.
+  $: {
+    isNewUser = !user || !('id' in user) || !user.id;
+    
+    if (!isNewUser) {
+      // Existing user: map API data to form state.
+      userData = {
+        ...user,
+        displayName: user.fullName, // Key mapping: API (fullName) -> Form (displayName)
+        processRoles: [...(user.processRoles || [])]
+      };
+    } else {
+      // New user: initialize with default values.
+      userData = { processRoles: [], systemRole: 'USER' };
+    }
+
+    title = isNewUser ? 'Añadir Nuevo Usuario' : 'Editar Usuario';
+    saveButtonText = isNewUser ? 'Enviar Invitación' : 'Guardar Cambios';
+  }
 
   // Tailwind classes for process role tags
   const tagColors = [
@@ -31,43 +49,64 @@
   ];
 
   // --- Computed properties ---
-  $: assignedRoles = $processRoleStore.filter(role => userData.processRoles?.includes(role.key));
-  $: availableRoles = $processRoleStore.filter(role => !userData.processRoles?.includes(role.key));
+  // <-- MODIFICATION: Access .roles property
+  $: assignedRoles = $processRoleStore.roles.filter(role => userData.processRoles?.includes(role.key));
+  $: availableRoles = $processRoleStore.roles.filter(role => !userData.processRoles?.includes(role.key));
 
   // --- Functions ---
   function closePanel() {
     dispatch('close');
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!userData.displayName || !userData.email) {
       toast.show('El nombre y el correo son obligatorios.', 'error');
       return;
     }
 
-    if (isNewUser) {
-      modal.show({
-        title: 'Confirmar Invitación',
-        message: `¿Deseas enviar una invitación a ${userData.email} para unirse?`,
-        onConfirm: () => {
-          const newUser: User = {
-            uid: uuidv4(),
-            displayName: userData.displayName!,
-            email: userData.email!,
-            systemRole: userData.systemRole || 'user',
-            processRoles: userData.processRoles || [],
-            avatarUrl: 'https://i.pravatar.cc/150?u=' + uuidv4(),
-            status: 'pending',
-          };
-          userStore.add(newUser);
-          toast.show(`Invitación enviada a ${newUser.email}.`, 'success');
-          closePanel();
-        },
-      });
-    } else {
-      userStore.update(userData as User);
-      toast.show(`Usuario "${userData.displayName}" actualizado.`, 'success');
+    try {
+      // <-- MODIFICATION: Access .roles property
+      const roleIds = $processRoleStore.roles
+        .filter(role => userData.processRoles?.includes(role.key))
+        .map(role => role.id)
+        .filter(id => id != null);
+
+      if (!isNewUser) {
+        // --- Edit Mode (UPDATE) ---
+        const updatePayload: { [key: string]: any } = {
+          fullName: userData.displayName,
+          email: userData.email,
+          systemRole: userData.systemRole,
+        };
+
+        if (roleIds.length > 0) {
+          updatePayload.roleIds = roleIds;
+        }
+
+        await userStore.updateUser(userData.id!, updatePayload);
+        toast.show(`Usuario "${userData.displayName}" actualizado.`, 'success');
+
+      } else {
+        // --- Create Mode (CREATE) ---
+        const createPayload: { [key:string]: any } = {
+          fullName: userData.displayName,
+          email: userData.email,
+          password: 'unaClaveSeguraTemporal123',
+          status: 'ACTIVE',
+          systemRole: userData.systemRole || 'USER',
+        };
+
+        if (roleIds.length > 0) {
+          createPayload.roleIds = roleIds;
+        }
+        
+        await userStore.createUser(createPayload as Omit<User, 'id'>);
+        toast.show(`Invitación enviada a ${userData.email}.`, 'success');
+      }
       closePanel();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Ocurrió un error inesperado';
+      toast.show(message, 'error');
     }
   }
 
@@ -77,7 +116,7 @@
       title: 'Eliminar Usuario',
       message: `¿Estás seguro de que deseas eliminar a ${userData.displayName}?`,
       onConfirm: () => {
-        userStore.delete(userData.uid!);
+        userStore.deleteUser(userData.id!);
         toast.show(`Usuario "${userData.displayName}" eliminado.`, 'success');
         closePanel();
       },
@@ -125,14 +164,8 @@
         <div class="form-group">
           <label for="systemRole" class="form-label">Rol del Sistema</label>
           <select id="systemRole" class="form-input" bind:value={userData.systemRole}>
-            <!-- Display the selected system role as a badge -->
-            {#if userData.systemRole}
-              <span class="px-2 py-px text-xs font-semibold rounded-full uppercase {userData.systemRole === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}">
-                {userData.systemRole}
-              </span>
-            {/if}
-            <option value="user">Usuario</option>
-            <option value="admin">Administrador</option>
+            <option value="USER">Usuario</option>
+            <option value="ADMIN">Administrador</option>
           </select>
         </div>
 
@@ -179,7 +212,7 @@
         <div>
             {#if !isNewUser}
                 <button type="button" class="btn-subtle-danger" on:click={handleDelete}>
-                    <Icon name="trash" class="mr-1" />
+                    <Icon name="x" class="mr-1" />
                     Eliminar
                 </button>
             {/if}

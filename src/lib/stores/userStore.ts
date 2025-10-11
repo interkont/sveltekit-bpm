@@ -31,6 +31,61 @@ const createUserStore = () => {
       set({ users: [], loading: false, error: message });
     }
   };
+
+  const fetchUserById = async (userId: number) => {
+    update(state => ({ ...state, loading: true, error: null }));
+    try {
+      let user = await userService.getUserById(userId);
+      // Transform data to ensure compatibility with components 
+      // expecting `processRoles` as an array of strings.
+      user = {
+        ...user,
+        processRoles: user.roles ? user.roles.map(r => r.name) : []
+      };
+      update(state => ({ ...state, loading: false }));
+      return user;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'An unknown error occurred';
+      update(state => ({ ...state, loading: false, error: message }));
+      throw error; // Re-throw so the component knows about the failure
+    }
+  };
+
+  const createUser = async (userData: Omit<User, 'id'>) => {
+    update(state => ({ ...state, loading: true }));
+    try {
+      await userService.createUser(userData);
+      await fetchUsers(); // Refresh the list
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create user';
+      update(state => ({ ...state, loading: false, error: message }));
+      throw error; // Re-throw to inform the component
+    }
+  };
+
+  const updateUser = async (userId: number, userData: Partial<User>) => {
+    update(state => ({ ...state, loading: true }));
+    try {
+      await userService.updateUser(userId, userData);
+      await fetchUsers(); // Refresh the list
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update user';
+      update(state => ({ ...state, loading: false, error: message }));
+      throw error; // Re-throw to inform the component
+    }
+  };
+
+  const deleteUser = async (userId: number) => {
+    update(state => ({ ...state, loading: true }));
+    try {
+      await userService.deleteUser(userId);
+      await fetchUsers(); // Refresh the list
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete user';
+      update(state => ({ ...state, loading: false, error: message }));
+      throw error; // Re-throw to inform the component
+    }
+  };
   
   // Future methods for local state manipulation can be added here
   // For example:
@@ -41,9 +96,10 @@ const createUserStore = () => {
   return {
     subscribe,
     fetchUsers,
-    // addUser,
-    // updateUser,
-    // deleteUser,
+    fetchUserById,
+    createUser,
+    updateUser,
+    deleteUser,
   };
 };
 

@@ -87,6 +87,7 @@
 	:root {
 		--bg-primary: #ffffff;
 		--bg-secondary: #f9fafb;
+		--bg-tertiary: #d4d4d4; /* Added for subtle hovers */
 		--bg-sidebar: #1a202c;
 		--text-primary: #1f2937;
 		--text-secondary: #6b7280;
@@ -100,6 +101,7 @@
 	:root.dark {
 		--bg-primary: #1f2937;
 		--bg-secondary: #374151;
+		--bg-tertiary: #626e7e; /* Added for subtle hovers */
 		--bg-sidebar: #111827;
 		--text-primary: #f9fafb;
 		--text-secondary: #9ca3af;
