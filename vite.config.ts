@@ -19,18 +19,14 @@ export default defineConfig(({ mode }) => {
         ],
       },
     },
-    optimizeDeps: {
-      exclude: ['bpmn-js', 'bpmn-js-properties-panel'],
-      include: [
-        'path-intersection',
-        'object-refs',
-        'hammerjs',
-        'classnames',
-        'array-move',
-        '@bpmn-io/extract-process-variables',
-        '@bpmn-io/extract-process-variables/zeebe'
-      ]
+    // The optimizeDeps section is no longer needed after removing bpmn-js
+    // We can remove it to keep the configuration clean.
+
+    // Add this section to fix the Svelte Flow SSR issue
+    ssr: {
+      noExternal: ['@xyflow/svelte'],
     },
+
     server: {
       proxy: {
         '/api': {

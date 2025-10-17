@@ -89,7 +89,9 @@ export interface ProcessModel {
     name: string;
     description: string;
     version: string;
-    bpmnXml: string;
+    flowJson: string; 
+    // --- FIX: Re-adding the missing property ---
+    lastModified: string;
 }
 
 export interface ProcessDefinition {

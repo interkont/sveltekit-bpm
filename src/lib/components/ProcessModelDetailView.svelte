@@ -1,159 +1,57 @@
 <script lang="ts">
-  import { onDestroy, tick, onMount } from 'svelte';
+  import { onMount } from 'svelte';
   import { slide } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
-  import { browser } from '$app/environment';
+  import { writable } from 'svelte/store';
+  import { SvelteFlow, Background } from '@xyflow/svelte';
+  import type { Node, Edge } from '@xyflow/svelte'; // Import Node and Edge types
+
+  import '@xyflow/svelte/dist/style.css';
 
   import { processModelDetailStore } from '$lib/stores/processModelDetailStore';
   import Icon from '$lib/components/Icon.svelte';
-  import { toast } from '$lib/stores/toast';
   import type { ProcessModel } from '$lib/types';
+
+  import StartEventNode from './nodes/StartEventNode.svelte';
+  import EndEventNode from './nodes/EndEventNode.svelte';
+  import UserTaskNode from './nodes/UserTaskNode.svelte';
+  import GatewayNode from './nodes/GatewayNode.svelte';
 
   export let model: ProcessModel;
 
-  let canvas: HTMLElement;
-  let propertiesContainer: HTMLElement;
-  let bpmnViewer: any = null;
-  let bpmnModeler: any = null;
-  let isLoading = false;
-  let isEditing = false;
-
-  // Caches para los módulos cargados dinámicamente, tal como en tu código original
-  let ViewerModule: any = null;
-  let ModelerModule: any = null;
-  let PropertiesPanelModule: any = null;
-  let PropertiesProviderModule: any = null;
-
-  // Reaccionar a cambios en el modelo para recargar el diagrama
-  $: if (browser && model) {
-    // Usar 'tick' para asegurar que el DOM se actualice antes de actuar
-    tick().then(() => {
-      if (isEditing) {
-        // Si ya estamos en modo edición, lo reiniciamos
-        enableEditing();
-      } else {
-        // Si no, reiniciamos el viewer
-        initializeViewer();
-      }
-    });
-  }
-
-  // Inicializa solo el VIEWER (modo consulta)
-  async function initializeViewer() {
-    if (!canvas || bpmnModeler) return; // No hacer nada si el canvas no está o si estamos en modo modeler
-    
-    // Destruir instancia previa de viewer para evitar duplicados
-    if (bpmnViewer) {
-        try { bpmnViewer.destroy(); } catch (e) { /* Silenciar error */ }
-        bpmnViewer = null;
-    }
-
-    isLoading = true;
-    try {
-      if (!ViewerModule) {
-        // Importación dinámica LOCAL del Viewer
-        const mod = await import('bpmn-js/lib/Viewer');
-        ViewerModule = mod.default;
-      }
-
-      bpmnViewer = new ViewerModule({ container: canvas });
-
-      if (model?.bpmnXml) {
-        await bpmnViewer.importXML(model.bpmnXml);
-        bpmnViewer.get('canvas').zoom('fit-viewport');
-      }
-    } catch (err) {
-      console.error('[initializeViewer] Error:', err);
-      toast.show('Error al mostrar el diagrama.', 'error');
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  // Habilita el modo edición (Modeler)
-  async function enableEditing() {
-    if (!model) return;
-    isEditing = true;
-    isLoading = true;
-
-    try {
-      // Destruir viewer si existe
-      if (bpmnViewer) {
-        try { bpmnViewer.destroy(); } catch (e) { /* Silenciar error */ }
-        bpmnViewer = null;
-      }
-
-      if (!ModelerModule) {
-        // Importaciones dinámicas LOCALES
-        const modelerMod = await import('bpmn-js/lib/Modeler');
-        const propsPanelMod = await import('bpmn-js-properties-panel');
-        
-        ModelerModule = modelerMod.default;
-        PropertiesPanelModule = propsPanelMod.BpmnPropertiesPanelModule;
-        PropertiesProviderModule = propsPanelMod.BpmnPropertiesProviderModule;
-      }
-      
-      // Esperar a que el contenedor de properties esté en el DOM
-      await tick();
-
-      bpmnModeler = new ModelerModule({
-        container: canvas,
-        propertiesPanel: { parent: propertiesContainer },
-        additionalModules: [PropertiesPanelModule, PropertiesProviderModule],
-        keyboard: { bindTo: document }
-      });
-
-      if (model.bpmnXml) {
-        await bpmnModeler.importXML(model.bpmnXml);
-        bpmnModeler.get('canvas').zoom('fit-viewport');
-      }
-    } catch (err) {
-      console.error('[enableEditing] Error:', err);
-      toast.show('No se pudo activar el modo edición.', 'error');
-      isEditing = false; // Revertir si falla
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  async function saveChanges() {
-    if (!bpmnModeler) return;
-    isLoading = true;
-    try {
-      const { xml } = await bpmnModeler.saveXML({ format: true });
-      model.bpmnXml = xml;
-      // AQUÍ iría la lógica para persistir el cambio en el backend
-      toast.show('Cambios guardados.', 'success');
-      await cancelEditing(); // Volver al modo viewer
-    } catch (err) {
-      console.error('Error al guardar cambios', err);
-      toast.show('Error al guardar.', 'error');
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  async function cancelEditing() {
-    if (bpmnModeler) {
-      try { bpmnModeler.destroy(); } catch (e) { /* Silenciar error */ }
-      bpmnModeler = null;
-    }
-    isEditing = false;
-    await tick();
-    initializeViewer(); // Volver al modo viewer
-  }
-  
-  // Llamada inicial cuando el panel se muestra
-  function handleIntroEnd() {
-    if (model) {
-        initializeViewer();
-    }
-  }
-
-  onDestroy(() => {
-    if (bpmnViewer) try { bpmnViewer.destroy(); } catch (_) {}
-    if (bpmnModeler) try { bpmnModeler.destroy(); } catch (_) {}
+  // --- CLIENT-SIDE GUARD ---
+  let isBrowser = false;
+  onMount(() => {
+    isBrowser = true;
   });
+
+  const nodeTypes = {
+    startEvent: StartEventNode,
+    endEvent: EndEventNode,
+    userTask: UserTaskNode,
+    gateway: GatewayNode
+  };
+
+  // --- FIX: Explicitly type the Svelte Flow stores ---
+  const nodes = writable<Node[]>([]);
+  const edges = writable<Edge[]>([]);
+
+  $: if (model) {
+    try {
+      if (model.flowJson) {
+        const flowData = JSON.parse(model.flowJson);
+        nodes.set(flowData.nodes || []);
+        edges.set(flowData.edges || []);
+      } else {
+        nodes.set([]);
+        edges.set([]);
+      }
+    } catch (e) {
+      console.error('Failed to parse flowJson:', e);
+      nodes.set([]);
+      edges.set([]);
+    }
+  }
 </script>
 
 <div 
@@ -168,7 +66,6 @@
 <aside 
   class="detail-panel" 
   transition:slide={{ duration: 400, easing: quintOut, axis: 'x' }}
-  on:introend={handleIntroEnd}
 >
   <header class="panel-header">
     <div>
@@ -177,12 +74,9 @@
       <p>ID: {model?.id} | Versión: {model?.version}</p>
     </div>
     <div class="header-actions">
-      {#if isEditing}
-        <button class="action-btn save-btn" on:click={saveChanges} disabled={isLoading}><Icon name="save" size={18}/> Guardar</button>
-        <button class="action-btn cancel-btn" on:click={cancelEditing} disabled={isLoading}><Icon name="x" size={18}/> Cancelar</button>
-      {:else}
-        <button class="action-btn" on:click={enableEditing} disabled={isLoading}><Icon name="edit" size={18}/> Editar</button>
-      {/if}
+      <button class="action-btn" on:click={() => (window.location.hash = 'process-models')}>
+        <Icon name="edit" size={18}/> Editar
+      </button>
       <button class="action-btn close-btn" on:click={processModelDetailStore.hide} title="Cerrar panel">
         <Icon name="x" size={28}/>
       </button>
@@ -190,16 +84,24 @@
   </header>
 
   <div class="panel-content">
-    {#if isLoading}
-      <div class="loading-overlay">
-        <Icon name="loader" size={48} class="spinner"/>
-        <span>Cargando Diagrama...</span>
-      </div>
-    {/if}
-    <div class="bpmn-container">
-      <div bind:this={canvas} class="diagram"></div>
-      {#if isEditing}
-        <div bind:this={propertiesContainer} class="properties"></div>
+    <div class="flow-container">
+      {#if isBrowser}
+        <SvelteFlow
+          nodes={$nodes}
+          edges={$edges}
+          {nodeTypes}
+          fitView
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={false}
+          zoomOnScroll={false}
+          zoomOnDoubleClick={false}
+          panOnDrag={true}
+        >
+          <Background />
+        </SvelteFlow>
+      {:else}
+        <div class="ssr-placeholder">Loading Diagram...</div>
       {/if}
     </div>
   </div>
@@ -215,8 +117,8 @@
   }
   .detail-panel {
     position: fixed; top: 0; right: 0;
-    width: 90vw;
-    max-width: 1600px;
+    width: 70vw;
+    max-width: 1200px;
     height: 100vh;
     background-color: var(--bg-primary);
     box-shadow: -10px 0 25px -5px rgba(0,0,0,0.1);
@@ -265,90 +167,20 @@
     flex-grow: 1;
     overflow: hidden;
     position: relative;
+    background-color: #f8f9fa;
   }
-
-  .bpmn-container {
-    display: flex;
+  
+  .flow-container {
     width: 100%;
     height: 100%;
-    border: 1px solid #ccc;
-  }
-  .diagram { flex: 3; }
-  .properties {
-    flex: 1;
-    border-left: 1px solid #ccc;
-    background: #f9f9f9;
-    overflow-y: auto;
   }
 
-  .loading-overlay {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background-color: rgba(255, 255, 255, 0.8);
+  .ssr-placeholder {
     display: flex;
-    flex-direction: column;
-    align-items: center;
     justify-content: center;
-    z-index: 10;
-    color: var(--text-primary);
-  }
-  :global(body.dark) .loading-overlay {
-    background-color: rgba(31, 41, 55, 0.8);
-  }
-  .loading-overlay span {
-    margin-top: 1rem;
-    font-weight: 500;
-  }
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
-  :global(.spinner) {
-    animation: spin 1s linear infinite;
-    color: var(--accent-color);
-  }
-
-  :global(.djs-visual > rects) {
-    fill: #e0e7ff !important;
-    stroke: var(--accent-color) !important;
-    stroke-width: 2px !important;
-  }
-  :global( .djs-visual > path) {
-    stroke: var(--text-secondary) !important;
-    stroke-width: 0.1rem !important;
-  }
-  :global(.djs-label) {
-    font-family: 'Inter', sans-serif !important;
-    fill: var(--text-primary) !important;
-    font-weight: 600 !important;
-  }
-  :global(.djs-element.djs-shape[data-element-id^="StartEvent_"] > .djs-visual > circle) {
-    fill: #e6fffa !important;
-    stroke: var(--success-color) !important;
-    stroke-width: 2.5px !important;
-  }
-  :global(.djs-visual > circle) {
-    fill: #fff5f5 !important;
-    stroke: #c53030 !important;
-    stroke-width: 3px !important;
-  }
-  :global(.djs-visual > rect) {
-    fill: var(--bg-primary) !important;
-    stroke: var(--text-secondary) !important;
-    stroke-width: 2px !important;
-  }
-  :global(.djs-visual > polygon) {
-    fill: #fffbeb !important;
-    stroke: #d69e2e !important;
-    stroke-width: 2.5px !important;
-  }
-  :global(.djs-connection-outline, .djs-outline) {
-    stroke: transparent !important;
-  }
-  :global(.djs-hit) {
-    stroke: none !important;
-    fill: transparent !important;
+    align-items: center;
+    height: 100%;
+    color: #9ca3af;
+    font-style: italic;
   }
 </style>

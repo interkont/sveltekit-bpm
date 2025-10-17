@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import type { ProcessDefinition } from '$lib/types';
+	// --- SOLUTION: Import the SvelteFlowProvider ---
+	import { SvelteFlowProvider } from '@xyflow/svelte';
 
 	// Stores
 	import { authStore } from '$lib/stores/authStore';
@@ -17,7 +19,6 @@
 	import ProcessListView from '$lib/components/ProcessListView.svelte';
 	import NewProcessView from '$lib/components/NewProcessView.svelte';
 	import ProcessModelListView from '$lib/components/ProcessModelListView.svelte';
-	import ModelerTest from '$lib/components/ModelerNew.svelte';
     import UserManagementView from '$lib/components/UserManagementView.svelte';
 	import StartProcessFormView from '$lib/components/StartProcessFormView.svelte';
 
@@ -33,6 +34,7 @@
 	$: {
 		if (typeof window !== 'undefined') {
 			const hash = $page.url.hash.substring(1);
+			// Default to 'dashboard' if hash is empty or just '#'
 			currentView = hash || 'dashboard';
 		}
 	}
@@ -54,26 +56,27 @@
 {#if !$authStore.token}
 	<LoginView />
 {:else}
-	<!-- Router principal basado en el Hash de la URL -->
-	{#if currentView === 'dashboard'}
-		<DashboardView />
-	{:else if currentView === 'tasks'}
-		<TaskListView />
-	{:else if currentView === 'processes'}
-		<ProcessListView on:navigate={handleNavigation} />
-	{:else if currentView === 'process-models'}
-		<ProcessModelListView />
-    {:else if currentView === 'test-modeler'}
-		<ModelerTest />
-	{:else if currentView === 'new-process'}
-		<NewProcessView on:navigate={handleNavigation} />
-	{:else if currentView === 'start-process-form'}
-		<StartProcessFormView processDefinition={viewContext as ProcessDefinition} on:navigate={handleNavigation} />
-    {:else if currentView === 'users'} 
-        <UserManagementView />
-	{/if}
+	<!-- --- SOLUTION: Wrap the entire view router in the SvelteFlowProvider --- -->
+	<SvelteFlowProvider>
+		{#if currentView === 'dashboard'}
+			<DashboardView />
+		{:else if currentView === 'tasks'}
+			<TaskListView />
+		{:else if currentView === 'processes'}
+			<ProcessListView on:navigate={handleNavigation} />
+		{:else if currentView === 'process-models'}
+			<ProcessModelListView />
+		{:else if currentView === 'new-process-model'}
+			<!-- This view will now have access to the Svelte Flow context -->
+			<NewProcessView />
+		{:else if currentView === 'start-process-form'}
+			<StartProcessFormView processDefinition={viewContext as ProcessDefinition} on:navigate={handleNavigation} />
+		{:else if currentView === 'users'} 
+			<UserManagementView />
+		{/if}
+	</SvelteFlowProvider>
 
-	<!-- Renderizado condicional de Paneles -->
+	<!-- Paneles de Detalle (estos no necesitan el provider si no renderizan un diagrama) -->
 	{#if $taskDetailStore.isOpen}
 		<TaskDetailPanel on:submit={handleTaskSubmit} />
 	{/if}
@@ -82,7 +85,8 @@
 		<ProcessDetailView />
 	{/if}
 
-	{#if $processModelDetailStore.isOpen}
+	<!-- --- FIX: Add a check to ensure the model is not null --- -->
+	{#if $processModelDetailStore.isOpen && $processModelDetailStore.model}
 		<ProcessModelDetailView model={$processModelDetailStore.model} />
 	{/if}
 {/if}
