@@ -26,7 +26,7 @@
   .user-task-node {
     padding: 10px 15px;
     border-radius: 8px;
-    background: white;
+    background: var(--c-background-ut);
     border: 2px solid #60a5fa; /* Blue */
     min-width: 150px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -70,4 +70,6 @@
     background-color: #fee2e2;
     color: #b91c1c;
   }
+  :root {--c-background-ut: white;}
+  :root.dark {--c-background-ut: #2a2a2a;}
 </style>

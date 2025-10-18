@@ -20,11 +20,11 @@ export interface User {
 }
 
 export interface ProcessRole {
-    id: number; // <-- Added ID
+    id: number;
     key: string; 
     name: string;
     description?: string;
-    users?: Partial<User>[]; // <-- Added optional users array
+    users?: Partial<User>[];
 }
 
 export interface ProcessTaskInstance {
@@ -90,7 +90,6 @@ export interface ProcessModel {
     description: string;
     version: string;
     flowJson: string; 
-    // --- FIX: Re-adding the missing property ---
     lastModified: string;
 }
 
@@ -104,6 +103,15 @@ export interface ProcessDefinition {
     status: string;
     bpmnProcessId: string;
     createdAt: string;
+}
+
+// --- ADD: Type for the editable process definition data in the panel ---
+export interface ProcessDefinitionData {
+    name: string;
+    description: string;
+    category: string | null;
+    status: 'DRAFT' | 'ACTIVE' | 'DEPRECATED';
+    businessProcessKey: string;
 }
 
 // --- Tipos para Formularios Dinámicos ---
@@ -126,7 +134,7 @@ export interface StartFormDefinition {
 }
 
 export interface TaskFormDefinition extends StartFormDefinition {}
-  
+
 // --- (El resto de los tipos de UI se mantienen igual) ---
   
 export interface StatCard { value: number | string; label: string; icon: string; color: 'blue' | 'green' | 'red' | 'yellow'; }

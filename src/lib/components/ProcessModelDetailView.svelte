@@ -15,7 +15,7 @@
   import StartEventNode from './nodes/StartEventNode.svelte';
   import EndEventNode from './nodes/EndEventNode.svelte';
   import UserTaskNode from './nodes/UserTaskNode.svelte';
-  import GatewayNode from './nodes/GatewayNode.svelte';
+  import ExclusiveGatewayNode from './nodes/ExclusiveGatewayNode.svelte';
 
   export let model: ProcessModel;
 
@@ -29,7 +29,7 @@
     startEvent: StartEventNode,
     endEvent: EndEventNode,
     userTask: UserTaskNode,
-    gateway: GatewayNode
+    exclusiveGateway: ExclusiveGatewayNode
   };
 
   // --- FIX: Explicitly type the Svelte Flow stores ---
