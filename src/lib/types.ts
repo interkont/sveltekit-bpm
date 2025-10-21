@@ -103,6 +103,7 @@ export interface ProcessDefinition {
     status: string;
     bpmnProcessId: string;
     createdAt: string;
+    diagramJson?: Record<string, any>; // <-- Changed to a flexible object
 }
 
 // --- ADD: Type for the editable process definition data in the panel ---
@@ -110,9 +111,41 @@ export interface ProcessDefinitionData {
     name: string;
     description: string;
     category: string | null;
-    status: 'DRAFT' | 'ACTIVE' | 'DEPRECATED';
+    status: 'DRAFT' | 'ACTIVE' | 'INACTIVE' | 'DEPRECATED';
     businessProcessKey: string;
 }
+
+// --- ADD: Types for API Payloads ---
+
+export interface ProcessElementPayload {
+    bpmnElementId: string;
+    name: string;
+    description?: string;
+    type: 'START_EVENT' | 'END_EVENT' | 'USER_TASK' | 'AUTO_TASK' | 'EXCLUSIVE_GATEWAY' | 'PARALLEL_GATEWAY';
+    assignedRoleId?: number;
+    webhook_target?: string;
+    sla_definition?: string;
+}
+
+export interface SequenceFlowPayload {
+    sourceElementBpmnId: string;
+    targetElementBpmnId: string;
+    conditionExpression?: string;
+}
+
+export interface ProcessDefinitionPayload extends ProcessDefinitionData {
+    bpmnProcessId?: string;
+    diagramJson: Record<string, any>;
+    elements: ProcessElementPayload[];
+    sequences: SequenceFlowPayload[];
+}
+
+export interface SaveActionResponse {
+    action: 'UPDATE_IN_PLACE' | 'CREATE_NEW_VERSION';
+    state: 'ACTIVE' | 'DRAFT' | 'INACTIVE' | 'DEPRECATED';
+    instancesCount: number;
+}
+
 
 // --- Tipos para Formularios Dinámicos ---
 
@@ -144,7 +177,7 @@ export interface ActivityItem { user: string; action: string; task: string; time
 export interface SlowProcess { id: string; name: string; duration: string; bottleneck: string; }
 export interface RecentModel { id: string; name: string; lastModified: string; editor: string; }
 export interface UserTask { id: string; name: string; process: string; dueDate: string; }
-export interface ModalConfig { title: string; message: string; onConfirm: () => void; }
+export interface ModalConfig { title: string; message: string; onConfirm: ()-› void; }
 export interface ToastNotification { id: number; message: string; type: 'success' | 'error'; duration?: number; }
 export interface GeneralInfoItem { label: string; value: string; icon: string; }
 export interface BusinessDataItem { label: string; value: string; }

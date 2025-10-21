@@ -1,23 +1,26 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
-  import { processModels } from '$lib/data/processModels';
-  import { processModelDetailStore } from '$lib/stores/processModelDetailStore';
-  import type { ProcessModel } from '$lib/types';
+  import { processDefinitionService } from '$lib/services/processDefinitionService';
+  import type { ProcessDefinition } from '$lib/types';
+  import { toast } from '$lib/stores/toast';
 
-  // --- REFACTOR ---
-  // The state for the modal is no longer needed.
-  // let isCreatingNew: boolean = false;
+  let definitions: ProcessDefinition[] = [];
+  let isLoading = true;
+  let error: string | null = null;
 
-  // We keep a local, mutable copy of the models to display.
-  let models: ProcessModel[] = [...processModels];
+  onMount(async () => {
+    try {
+      isLoading = true;
+      definitions = await processDefinitionService.getAllProcesses();
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'An unknown error occurred.';
+      toast.show('Failed to load process models: ' + error, 'error');
+    } finally {
+      isLoading = false;
+    }
+  });
 
-  // --- REFACTOR ---
-  // The save and cancel handlers for the modal are removed.
-  // The logic for saving will be handled within the editor view itself.
-
-  function handleShowDetail(model: ProcessModel) {
-    processModelDetailStore.show(model);
-  }
 </script>
 
 <div class="view-container">
@@ -26,30 +29,43 @@
       <h2>Modelado de Procesos</h2>
       <p>Define, visualiza y gestiona las plantillas de tus procesos de negocio.</p>
     </div>
-    <!-- --- REFACTOR: Button is now a direct link to the new editor route --- -->
     <a href="/#new-process-model" class="create-btn">
       <Icon name="plus" size={20}/>
       Crear Nuevo Modelo
     </a>
   </div>
 
-  <!-- --- REFACTOR: The entire modal block has been removed --- -->
-
-  <div class="models-grid">
-    {#each models as model (model.id)}
-      <div class="model-card" on:click={() => handleShowDetail(model)} on:keydown={() => handleShowDetail(model)} role="button" tabindex="0">
-        <div class="card-header">
-          <div class="card-icon"><Icon name="network" size={24}/></div>
-          <h3 class="model-name">{model.name}</h3>
-        </div>
-        <p class="model-description">{model.description}</p>
-        <div class="card-footer">
-          <span class="version-chip">v{model.version}</span>
-          <span>Última mod: {model.lastModified}</span>
-        </div>
-      </div>
-    {/each}
-  </div>
+  {#if isLoading}
+    <div class="loading-state">
+      <p>Cargando modelos de proceso...</p>
+    </div>
+  {:else if error}
+    <div class="error-state">
+      <p>Error: {error}</p>
+    </div>
+  {:else}
+    <div class="models-grid">
+      {#each definitions as def (def.id)}
+        <a href="/#process-model-detail/{def.id}" class="model-card">
+          <div class="card-header">
+            <div class="card-icon"><Icon name="network" size={24}/></div>
+            <h3 class="model-name">{def.name}</h3>
+          </div>
+          <p class="model-description">{def.description}</p>
+          <div class="card-footer">
+            <span class="version-chip">v{def.version}</span>
+            <span 
+              class:status-active={def.status === 'ACTIVE'} 
+              class:status-draft={def.status === 'DRAFT'}
+              class:status-deprecated={def.status === 'DEPRECATED'}
+            >
+              {def.status}
+            </span>
+          </div>
+        </a>
+      {/each}
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -81,6 +97,8 @@
     padding: 1.5rem;
     cursor: pointer;
     transition: all 0.2s ease-in-out;
+    text-decoration: none; /* Remove underline from link */
+    color: inherit; /* Inherit text color */
   }
   .model-card:hover {
     transform: translateY(-4px);
@@ -109,6 +127,8 @@
     background-color: var(--bg-primary); padding: 0.2rem 0.6rem;
     border-radius: 99px; font-weight: 500;
   }
-
-  /* --- REFACTOR: All modal styles have been removed --- */
+  .status-active { color: #16a34a; font-weight: 600; }
+  .status-draft { color: #ca8a04; font-weight: 600; }
+  .status-deprecated { color: #7f1d1d; font-weight: 600; }
+  .loading-state, .error-state { text-align: center; padding: 2rem; }
 </style>

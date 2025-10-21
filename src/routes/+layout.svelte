@@ -6,6 +6,8 @@
 	import '$lib/vendor/bpmn-styles/bpmn-js-properties-panel.css';
 
 	import { onMount } from 'svelte';
+	import { locale, waitLocale } from 'svelte-i18n';
+	import '$lib/i18n'; // Import to initialize
 	import { theme } from '$lib/stores/theme';
 	import { authStore } from '$lib/stores/authStore';
 	import { authService } from '$lib/services/authService';
@@ -22,9 +24,14 @@
 	import { profilePanelStore } from '$lib/stores/profilePanelStore';
 	import { toast } from '$lib/stores/toast';
 
-	onMount(() => {
+	let isLocaleLoaded = false;
+	onMount(async () => {
 		theme.init();
 		authService.initializeAuth();
+		
+		// Wait for the initial locale to load
+		await waitLocale();
+		isLocaleLoaded = true;
 	});
 
 	function handleConfirm() {
@@ -50,6 +57,7 @@
 	/>
 </svelte:head>
 
+{#if isLocaleLoaded}
 <div class="app-container">
 	{#if $authStore.token}
 		<div class="main-layout">
@@ -82,6 +90,7 @@
 		<ProfilePanel on:submit={handleProfileSubmit}></ProfilePanel>
 	{/if}
 </div>
+{/if}
 
 <style>
 	:root {

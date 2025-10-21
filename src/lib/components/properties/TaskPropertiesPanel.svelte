@@ -6,6 +6,7 @@
   
   // --- FIX: Use the specific AppNode type for the node prop ---
   export let node: Node;
+  export let disabled: boolean = false;
 
   const dispatch = createEventDispatcher();
 
@@ -56,6 +57,7 @@
       type="text" 
       bind:value={label}
       on:blur={handleUpdate}
+      {disabled}
     />
   </div>
 
@@ -67,6 +69,7 @@
       on:blur={handleUpdate}
       rows="4"
       placeholder="Add an optional description..."
+      {disabled}
     />
   </div>
 
@@ -87,6 +90,7 @@
         bind:value={assignedRoleId}
         on:change={handleUpdate}
         class:error={node.type === 'userTask' && !assignedRoleId}
+        {disabled}
       >
         <option value="">-- Select a role --</option>
         {#each $processRoleStore.roles as role (role.id)}
@@ -134,6 +138,10 @@
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
   }
   .readonly-input { cursor: not-allowed; color: var(--text-secondary); }
+  input:disabled, textarea:disabled, select:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
   .divider {
     border: none;
     border-top: 1px solid #e5e7eb;

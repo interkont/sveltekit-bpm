@@ -2,6 +2,7 @@
     import { goto } from '$app/navigation';
     import { authService } from '$lib/services/authService';
     import Icon from '$lib/components/Icon.svelte';
+    import { _ } from 'svelte-i18n';
   
     let email: string = 'admin@flowify.com';
     let password: string = 'admin123';
@@ -13,7 +14,6 @@
       errorMessage = '';
       try {
         await authService.login({ email, password });
-        // On successful login, navigate to the dashboard/home page
         goto('/');
       } catch (e) {
         if (e instanceof Error) {
@@ -34,8 +34,8 @@
             <span class="logo-text">Flowify</span>
         </div>
         <div class="header-text">
-            <h2>Bienvenido de Nuevo</h2>
-            <p>Inicia sesión para continuar gestionando tus procesos.</p>
+            <h2>{$_('login.welcome')}</h2>
+            <p>{$_('login.subtitle')}</p>
         </div>
 
         <form on:submit|preventDefault={handleLogin}>
@@ -47,28 +47,28 @@
             {/if}
 
             <div class="form-field">
-                <label for="email">Correo Electrónico</label>
+                <label for="email">{$_('login.email_label')}</label>
                 <input type="email" id="email" bind:value={email} required placeholder="tu@empresa.com"/>
             </div>
             <div class="form-field">
-                <label for="password">Contraseña</label>
+                <label for="password">{$_('login.password_label')}</label>
                 <input type="password" id="password" bind:value={password} required placeholder=""/>
             </div>
             <div class="form-options">
                 <label>
                     <input type="checkbox"/>
-                    Recordarme
+                    {$_('login.remember_me')}
                 </label>
-                <div>¿Olvidaste tu contraseña?</div>
+                <div>{$_('login.forgot_password')}</div>
             </div>
 
             <button type="submit" class="login-btn" disabled={isLoading}>
                 {#if isLoading}
                     <div class="spinner"></div>
-                    <span>Autenticando...</span>
+                    <span>{$_('login.logging_in')}</span>
                 {:else}
                     <Icon name="log-in" size={20}/>
-                    <span>Iniciar Sesión</span>
+                    <span>{$_('login.login_button')}</span>
                 {/if}
             </button>
         </form>

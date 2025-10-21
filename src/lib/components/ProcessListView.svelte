@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
+  import { _ } from 'svelte-i18n';
   import Icon from '$lib/components/Icon.svelte';
   import { processDetailStore } from '$lib/stores/processDetailStore';
   import { processListStore } from '$lib/stores/processListStore';
@@ -30,21 +31,21 @@
 <div class="view-container">
   <div class="view-header">
     <div>
-      <h2>Lista de Procesos</h2>
-      <p>Supervisa todas las instancias de procesos activas e históricas.</p>
+      <h2>{$_('process_list.title')}</h2>
+      <p>{$_('process_list.description')}</p>
     </div>
     <button class="create-btn" on:click={() => dispatch('navigate', { view: 'new-process' })}>
       <Icon name="plus" size={20}/>
-      Crear nueva solicitud
+      {$_('process_list.create_button')}
     </button>
   </div>
 
   <div class="tabs">
     <button class:active={activeTab === 'running'} on:click={() => setTab('running')}>
-      En Ejecución ({runningProcesses.length})
+      {$_('process_list.running_tab')} ({runningProcesses.length})
     </button>
     <button class:active={activeTab === 'historical'} on:click={() => setTab('historical')}>
-      Históricos ({historicalProcesses.length})
+      {$_('process_list.historical_tab')} ({historicalProcesses.length})
     </button>
   </div>
 
@@ -52,17 +53,17 @@
     {#if $processListStore.loading}
       <div class="state-placeholder">
         <Icon name="loader" size={24} spinning={true} />
-        <span>Cargando instancias...</span>
+        <span>{$_('process_list.loading')}</span>
       </div>
     {:else if $processListStore.error}
       <div class="state-placeholder error">
         <Icon name="alert-triangle" size={24} />
-        <span>Error al cargar: {$processListStore.error}</span>
+        <span>{$_('process_list.error')}: {$processListStore.error}</span>
       </div>
     {:else if processes.length === 0}
       <div class="state-placeholder">
         <Icon name="inbox" size={24} />
-        <span>No hay instancias en esta vista.</span>
+        <span>{$_('process_list.empty')}</span>
       </div>
     {:else}
       <div class="process-list">
@@ -73,7 +74,7 @@
               <div>
                 <h3 class="process-name">{process.processDefinition.name} (ID: {process.id})</h3>
                 <p class="process-description">{process.description}</p>
-                <span class="process-meta">Iniciado por <strong>{process.startedByUser.fullName}</strong> el {new Date(process.startTime).toLocaleDateString()}</span>
+                <span class="process-meta">{$_('process_list.started_by')} <strong>{process.startedByUser.fullName}</strong> {$_('process_list.on')} {new Date(process.startTime).toLocaleDateString()}</span>
               </div>
             </div>
             <div class="process-status">
@@ -81,7 +82,7 @@
             </div>
             <div class="process-actions">
               <button class="details-btn" on:click={() => handleShowDetail(process.id)}>
-                <Icon name="eye" size={16}/> Ver Detalle
+                <Icon name="eye" size={16}/> {$_('process_list.view_details_button')}
               </button>
             </div>
           </div>

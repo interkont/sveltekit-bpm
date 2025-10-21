@@ -1,40 +1,54 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import { onMount } from 'svelte';
 
   export let processData: {
     name: string;
     description: string;
     category: string | null;
-    status: 'DRAFT' | 'ACTIVE' | 'DEPRECATED';
+    status: 'DRAFT' | 'ACTIVE' | 'INACTIVE' | 'DEPRECATED';
     businessProcessKey: string;
   };
   
+  export let disabled: boolean = false;
   export let isNewProcess: boolean = true;
 
   const dispatch = createEventDispatcher();
 
   let { name, description, category, status, businessProcessKey } = processData;
 
-  // --- FIX: Add a tracker for the current process key ---
   let currentProcessKey = processData.businessProcessKey;
+  
+  // User-selectable options
+  const userStatusOptions = ['DRAFT', 'ACTIVE', 'INACTIVE'];
+  
+  // The full list of options, which might include a non-selectable current status
+  let allStatusOptions = [...userStatusOptions];
 
-  const statusOptions = ['DRAFT', 'ACTIVE', 'DEPRECATED'];
+  onMount(() => {
+    if (status === 'DEPRECATED' && !allStatusOptions.includes('DEPRECATED')) {
+      allStatusOptions.push('DEPRECATED');
+    }
+  });
 
   function handleUpdate() {
-    dispatch('update', {
-      name,
-      description,
-      category,
-      status,
-      businessProcessKey
-    });
+    dispatch('update', { name, description, category, status, businessProcessKey });
   }
 
-  // --- FIX: Break the reactive loop by checking against the tracker ---
-  // This block will now only run when a completely different process is loaded into the panel.
+  function handleSaveMetadata() {
+    handleUpdate();
+    dispatch('saveMetadata');
+  }
+
   $: if (processData.businessProcessKey !== currentProcessKey) {
     ({ name, description, category, status, businessProcessKey } = processData);
-    currentProcessKey = processData.businessProcessKey; // Update the tracker
+    currentProcessKey = processData.businessProcessKey;
+    // Re-evaluate if DEPRECATED needs to be in the list for the newly loaded process
+    if (status === 'DEPRECATED' && !allStatusOptions.includes('DEPRECATED')) {
+      allStatusOptions = [...userStatusOptions, 'DEPRECATED'];
+    } else if (status !== 'DEPRECATED') {
+      allStatusOptions = [...userStatusOptions];
+    }
   }
 </script>
 
@@ -47,6 +61,7 @@
       bind:value={name}
       on:blur={handleUpdate}
       placeholder="e.g., Purchase Request"
+      {disabled}
     />
   </div>
 
@@ -57,9 +72,10 @@
       type="text" 
       bind:value={businessProcessKey}
       on:blur={handleUpdate}
-      readonly={!isNewProcess}
-      class:readonly-input={!isNewProcess}
+      readonly={!isNewProcess || disabled}
+      class:readonly-input={!isNewProcess || disabled}
       placeholder="e.g., PURCHASE_REQUEST"
+      {disabled}
     />
     <small>Unique identifier. Cannot be changed after creation.</small>
   </div>
@@ -72,6 +88,7 @@
       on:blur={handleUpdate}
       rows="4"
       placeholder="A brief summary of what this process does."
+      {disabled}
     />
   </div>
 
@@ -83,6 +100,7 @@
       bind:value={category}
       on:blur={handleUpdate}
       placeholder="e.g., Finance"
+      {disabled}
     />
   </div>
 
@@ -92,12 +110,21 @@
       id="proc-status"
       bind:value={status}
       on:change={handleUpdate}
+      {disabled}
     >
-      {#each statusOptions as option}
-        <option value={option}>{option}</option>
+      {#each allStatusOptions as option}
+        <option value={option} disabled={option === 'DEPRECATED' && status !== 'DEPRECATED'}>
+          {option}
+        </option>
       {/each}
     </select>
   </div>
+
+  {#if !disabled && !isNewProcess}
+    <button class="save-metadata-btn" on:click={handleSaveMetadata}>
+      Actualizar Propiedades
+    </button>
+  {/if}
 </div>
 
 <style>
@@ -119,5 +146,23 @@
   }
   input,textarea,select {background-color: var(--bg-secondary);}
   .readonly-input { cursor: not-allowed; color: var(--text-secondary); }
+  input:disabled, textarea:disabled, select:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+  option:disabled {
+    color: #9ca3af;
+  }
   small { margin-top: 0.375rem; font-size: 12px; color: #6b7280; }
+  .save-metadata-btn {
+    margin-top: 0.5rem;
+    background-color: #10b981;
+    color: white;
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .save-metadata-btn:hover { background-color: #059669; }
 </style>

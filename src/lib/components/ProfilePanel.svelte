@@ -6,12 +6,12 @@
   import Icon from '$lib/components/Icon.svelte';
   import { authStore } from '$lib/stores/authStore';
   import { authService } from '$lib/services/authService';
+  import { _, locale } from 'svelte-i18n';
 
   const dispatch = createEventDispatcher<{
     submit: { name: string; email: string };
   }>();
 
-  // Estado local para el formulario
   let formData = { 
     name: $authStore.user?.fullName || '', 
     email: $authStore.user?.email || '' 
@@ -19,6 +19,13 @@
   let currentPassword = '';
   let newPassword = '';
   let confirmPassword = '';
+
+  // Reactive subscription to locale changes
+  locale.subscribe((newLocale) => {
+    if (newLocale && typeof window !== 'undefined') {
+      window.localStorage.setItem('user-locale', newLocale);
+    }
+  });
 
   function handleSubmit() {
     dispatch('submit', { name: formData.name, email: formData.email });
@@ -36,8 +43,8 @@
   <aside class="detail-panel profile-panel" transition:slide={{ duration: 400, easing: quintOut, axis: 'x' }}>
     <header class="panel-header">
       <div>
-        <h2 class="header-title"><Icon name="user" size={28}/> Mi Perfil</h2>
-        <p>Gestiona tu información personal y de seguridad.</p>
+        <h2 class="header-title"><Icon name="user" size={28}/> {$_('profile_panel.title')}</h2>
+        <p>{$_('profile_panel.subtitle')}</p>
       </div>
       <button class="close-btn" on:click={() => profilePanelStore.set(false)} title="Cerrar panel">
         <Icon name="x" size={28}/>
@@ -46,56 +53,60 @@
 
     <div class="panel-content-full">
       <div class="profile-grid">
-        <!-- Columna de Información Personal -->
         <div class="form-section">
-          <h3>Información Personal</h3>
+          <h3>{$_('profile_panel.personal_info')}</h3>
           <div class="avatar-section">
             <img src={$authStore.user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent($authStore.user.fullName)}&background=random`} alt="Avatar de {$authStore.user.fullName}" class="avatar-img"/>
             <div class="avatar-actions">
                 <p>{$authStore.user.fullName}</p>
                 <span>{$authStore.user.email}</span>
                 <button class="upload-btn">
-                    <Icon name="upload-cloud" size={16}/> Cambiar Foto
+                    <Icon name="upload-cloud" size={16}/> {$_('profile_panel.change_photo')}
                 </button>
             </div>
           </div>
           <div class="form-field">
-            <label for="fullName">Nombre Completo</label>
+            <label for="fullName">{$_('profile_panel.name_label')}</label>
             <input type="text" id="fullName" bind:value={formData.name}>
           </div>
           <div class="form-field">
-            <label for="email">Correo Electrónico</label>
+            <label for="email">{$_('profile_panel.email_label')}</label>
             <input type="email" id="email" bind:value={formData.email} disabled>
+          </div>
+           <div class="form-field">
+              <label for="language">{$_('profile_panel.language_label')}</label>
+              <select id="language" bind:value={$locale}>
+                  <option value="es">Español</option>
+                  <option value="en">English</option>
+              </select>
           </div>
         </div>
 
-        <!-- Columna de Seguridad -->
         <div class="form-section">
-          <h3>Seguridad y Contraseña</h3>
+          <h3>{$_('profile_panel.security_title')}</h3>
            <div class="form-field">
-            <label for="currentPassword">Contraseña Actual</label>
+            <label for="currentPassword">{$_('profile_panel.current_password')}</label>
             <input type="password" id="currentPassword" placeholder="••••••••" bind:value={currentPassword}>
           </div>
            <div class="form-field">
-            <label for="newPassword">Nueva Contraseña</label>
+            <label for="newPassword">{$_('profile_panel.new_password')}</label>
             <input type="password" id="newPassword" placeholder="Mínimo 8 caracteres" bind:value={newPassword}>
           </div>
            <div class="form-field">
-            <label for="confirmPassword">Confirmar Nueva Contraseña</label>
+            <label for="confirmPassword">{$_('profile_panel.confirm_password')}</label>
             <input type="password" id="confirmPassword" placeholder="Repite la nueva contraseña" bind:value={confirmPassword}>
           </div>
         </div>
       </div>
       
-      <!-- === SECCIÓN DE ROLES AJUSTADA === -->
       <div class="form-section">
-        <h3>Tus Roles</h3>
+        <h3>{$_('profile_panel.roles_title')}</h3>
         <div class="form-field">
-            <label>Rol de Sistema</label>
+            <label>{$_('profile_panel.system_role')}</label>
             <span class="px-2 py-px text-xs font-semibold rounded-full uppercase {$authStore.user.systemRole.toLowerCase() === 'admin' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100' : 'bg-purple-100 text-purple-800 dark:bg-purple-700 dark:text-purple-300'}">{$authStore.user.systemRole}</span>
         </div>
         <div class="form-field">
-            <label>Roles de Proceso</label>
+            <label>{$_('profile_panel.process_roles')}</label>
             {#if $authStore.user.processRoles && $authStore.user.processRoles.length > 0}
                 <div class="role-badge-group">
                     {#each $authStore.user.processRoles as roleName}
@@ -103,7 +114,7 @@
                     {/each}
                 </div>
             {:else}
-                <p class="no-roles-text">No tienes roles de proceso asignados.</p>
+                <p class="no-roles-text">{$_('profile_panel.no_process_roles')}</p>
             {/if}
         </div>
       </div>
@@ -111,11 +122,11 @@
 
     <footer class="panel-footer">
         <button class="logout-btn" on:click={handleLogout}>
-          <Icon name="log-out" size={16}/> Cerrar Sesión
+          <Icon name="log-out" size={16}/> {$_('profile_panel.logout_button')}
         </button>
         <div class="actions-right">
-          <button class="cancel-btn" on:click={() => profilePanelStore.set(false)}>Cancelar</button>
-          <button class="submit-btn" on:click={handleSubmit}>Guardar Cambios</button>
+          <button class="cancel-btn" on:click={() => profilePanelStore.set(false)}>{$_('profile_panel.cancel_button')}</button>
+          <button class="submit-btn" on:click={handleSubmit}>{$_('profile_panel.save_button')}</button>
         </div>
     </footer>
   </aside>
@@ -163,31 +174,13 @@
 .upload-btn { display: flex; align-items: center; gap: 0.5rem; background: none; border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem 1rem; border-radius: 6px; margin-top: 0.5rem; cursor: pointer; }
 .form-field { margin-bottom: 1.5rem; }
 .form-field label { display: block; font-weight: 500; color: var(--text-primary); margin-bottom: 0.5rem; }
-.form-field input { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); background-color: var(--bg-secondary); color: var(--text-primary); border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
+.form-field input, .form-field select { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); background-color: var(--bg-secondary); color: var(--text-primary); border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
 .form-field input:disabled { background-color: var(--bg-hover); color: var(--text-secondary); }
-
-/* === NUEVOS ESTILOS PARA ROLES === */
 .role-badge-group {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
     margin-top: 0.25rem;
-}
-.role-badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    white-space: nowrap;
-    display: inline-block;
-}
-.system-role {
-    background-color: #28a74520;
-    color: #28a745;
-}
-.process-role {
-    background-color: #17a2b820;
-    color: #17a2b8;
 }
 .no-roles-text {
     font-size: 0.9rem;
@@ -195,7 +188,6 @@
     margin: 0.25rem 0 0 0;
 }
 
-/* Estilos del Footer (sin cambios) */
 .panel-footer { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; border-top: 1px solid var(--border-color); background-color: var(--bg-secondary); }
 .actions-right { display: flex; gap: 1rem; }
 button { cursor: pointer; font-weight: 500; padding: 0.75rem 1.5rem; border-radius: 8px; border: 1px solid transparent; display: flex; align-items: center; gap: 0.5rem; }

@@ -1,0 +1,63 @@
+{
+  "process_list": {
+    "title": "Lista de Procesos",
+    "description": "Supervisa todas las instancias de procesos activas e históricas.",
+    "create_button": "Crear nueva solicitud",
+    "running_tab": "En Ejecución",
+    "historical_tab": "Históricos",
+    "loading": "Cargando instancias...",
+    "error": "Error al cargar",
+    "empty": "No hay instancias en esta vista.",
+    "started_by": "Iniciado por",
+    "on": "el",
+    "view_details_button": "Ver Detalle"
+  },
+  "login": {
+    "welcome": "Bienvenido de Nuevo",
+    "subtitle": "Inicia sesión para continuar gestionando tus procesos.",
+    "email_label": "Correo Electrónico",
+    "password_label": "Contraseña",
+    "remember_me": "Recordarme",
+    "forgot_password": "¿Olvidaste tu contraseña?",
+    "login_button": "Iniciar Sesión",
+    "logging_in": "Autenticando..."
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "tasks": "Tareas",
+    "cases": "Casos",
+    "processes": "Procesos",
+    "teams": "Organización",
+    "logout_confirm_title": "Confirmar Cierre de Sesión",
+    "logout_confirm_message": "¿Estás seguro de que deseas cerrar tu sesión en Flowify?",
+    "logout_button": "Cerrar Sesión",
+    "expand_menu": "Expandir menú",
+    "collapse_menu": "Colapsar menú"
+  },
+  "profile_panel": {
+    "title": "Mi Perfil",
+    "subtitle": "Gestiona tu información personal y de seguridad.",
+    "personal_info": "Información Personal",
+    "change_photo": "Cambiar Foto",
+    "name_label": "Nombre Completo",
+    "email_label": "Correo Electrónico",
+    "security_title": "Seguridad y Contraseña",
+    "current_password": "Contraseña Actual",
+    "new_password": "Nueva Contraseña",
+    "confirm_password": "Confirmar Nueva Contraseña",
+    "roles_title": "Tus Roles",
+    "system_role": "Rol de Sistema",
+    "process_roles": "Roles de Proceso",
+    "no_process_roles": "No tienes roles de proceso asignados.",
+    "language_label": "Idioma",
+    "save_button": "Guardar Cambios",
+    "cancel_button": "Cancelar",
+    "logout_button": "Cerrar Sesión"
+  },
+  "editor": {
+    "save_confirm_title": "Confirmar Guardado",
+    "save_confirm_new": "Se creará un nuevo proceso con los datos proporcionados. ¿Desea continuar?",
+    "save_confirm_update": "Se van a actualizar todos los elementos del flujo y propiedades del proceso. ¿Desea continuar?",
+    "save_confirm_new_version": "El proceso se encuentra en estado \"{state}\" y cuenta con {instancesCount} casos creados. Se va a crear una nueva versión en DRAFT. ¿Desea continuar?"
+  }
+}

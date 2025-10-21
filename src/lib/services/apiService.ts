@@ -10,6 +10,10 @@ export const setAuthToken = (token: string | null) => {
 
 const handleResponse = async <T>(response: Response): Promise<T> => {
   if (response.ok) {
+    // For 204 No Content, return an empty object.
+    if (response.status === 204) {
+      return {} as T;
+    }
     const text = await response.text();
     return text ? JSON.parse(text) : ({} as T);
   } else {
@@ -67,4 +71,5 @@ const request = async <T>(
 export const get = <T>(endpoint: string): Promise<T> => request<T>('GET', endpoint);
 export const post = <T>(endpoint: string, body: object): Promise<T> => request<T>('POST', endpoint, body);
 export const put = <T>(endpoint: string, body: object): Promise<T> => request<T>('PUT', endpoint, body);
+export const patch = <T>(endpoint: string, body: object): Promise<T> => request<T>('PATCH', endpoint, body);
 export const del = <T>(endpoint: string): Promise<T> => request<T>('DELETE', endpoint);

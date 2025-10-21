@@ -3,6 +3,7 @@
   import type { Node } from '@xyflow/svelte';
 
   export let node: Node;
+  export let disabled: boolean = false;
 
   const dispatch = createEventDispatcher();
 
@@ -44,6 +45,7 @@
       type="text" 
       bind:value={label}
       on:blur={handleUpdate}
+      {disabled}
     />
   </div>
 
@@ -56,6 +58,7 @@
       on:blur={handleUpdate}
       rows="4"
       placeholder="Add an optional description for this element..."
+      {disabled}
     />
   </div>
 </div>
@@ -94,6 +97,10 @@
     cursor: not-allowed;
     color: var(--text-secondary);
     border: 1px solid #e5e7eb;
+  }
+  input:disabled, textarea:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
   }
   input,textarea,select {background-color: var(--bg-secondary);}
 </style>

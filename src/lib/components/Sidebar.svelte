@@ -2,9 +2,9 @@
   import Icon from '$lib/components/Icon.svelte';
   import { sidebarStore } from '$lib/stores/sidebarStore';
   import { page } from '$app/stores';
-  // --- AJUSTE: Corregir el nombre del store importado ---
   import { modal } from '$lib/stores/modal';
   import { authService } from '$lib/services/authService';
+  import { _ } from 'svelte-i18n';
 
   $: activeItem = $page.url.hash.substring(1) || 'dashboard';
 
@@ -12,11 +12,10 @@
     window.location.hash = view;
   }
 
-  // --- AJUSTE: Usar el nombre correcto del store (`modal`) ---
   function handleLogout() {
     modal.show({
-      title: 'Confirmar Cierre de Sesión',
-      message: '¿Estás seguro de que deseas cerrar tu sesión en Flowify?',
+      title: $_('sidebar.logout_confirm_title'),
+      message: $_('sidebar.logout_confirm_message'),
       onConfirm: () => {
         authService.logout();
       }
@@ -32,44 +31,37 @@
   <nav>
     <button class:active={activeItem === 'dashboard'} on:click={() => navigate('dashboard')}>
       <Icon name="layout-dashboard" size={24}/>
-      <span class="nav-text">Dashboard</span>
+      <span class="nav-text">{$_('sidebar.dashboard')}</span>
     </button>
     <button class:active={activeItem === 'tasks'} on:click={() => navigate('tasks')}>
       <Icon name="check-square" size={24}/>
-      <span class="nav-text">Mis Tareas</span>
+      <span class="nav-text">{$_('sidebar.tasks')}</span>
     </button>
     <button class:active={activeItem === 'processes'} on:click={() => navigate('processes')}>
       <Icon name="git-branch" size={24}/>
-      <span class="nav-text">Instancias</span>
+      <span class="nav-text">{$_('sidebar.cases')}</span>
     </button>
     <button class:active={activeItem === 'process-models'} on:click={() => navigate('process-models')}>
       <Icon name="network" size={24}/>
-      <span class="nav-text">Modelado</span>
+      <span class="nav-text">{$_('sidebar.processes')}</span>
     </button>
     <button class:active={activeItem === 'users'} on:click={() => navigate('users')}>
       <Icon name="users" size={24}/>
-      <span class="nav-text">Usuarios</span>
+      <span class="nav-text">{$_('sidebar.teams')}</span>
     </button>
-		<!--
-    <button class:active={activeItem === 'test-modeler'} on:click={() => navigate('test-modeler')}>
-      <Icon name="network" size={24}/>
-      <span class="nav-text">Test Modeler</span>
-    </button>
-    -->
   </nav>
 
   <div class="sidebar-footer">
     <button class="logout-btn" on:click={handleLogout}>
         <Icon name="log-out" size={24}/>
-        <span class="nav-text">Cerrar Sesión</span>
+        <span class="nav-text">{$_('sidebar.logout_button')}</span>
     </button>
   </div>
 
-  <!-- Botón de colapsar/expandir - REPOSICIONADO -->
   <button
     class="collapse-btn"
     on:click={sidebarStore.toggle}
-    title={$sidebarStore ? 'Expandir menú' : 'Colapsar menú'}
+    title={$sidebarStore ? $_('sidebar.expand_menu') : $_('sidebar.collapse_menu')}
   >
       <Icon name={$sidebarStore ? 'chevron-right-circle' : 'chevron-left-circle'} size={24}/>
     </button>
@@ -85,11 +77,11 @@
     flex-direction: column;
     flex-shrink: 0;
     transition: width 0.3s ease;
-    position: relative; /* Añadido para posicionamiento absoluto del botón */
+    position: relative;
   }
 
   aside.collapsed {
-    width: 88px; /* Ajustado para el padding */
+    width: 88px;
   }
 
   aside.collapsed .logo,
@@ -110,7 +102,7 @@
   }
   aside.collapsed button {
     justify-content: center;
-    padding: 0.5rem; /* Padding uniforme para modo colapsado */
+    padding: 0.5rem;
   }
 
   .logo {
@@ -156,28 +148,28 @@
   }
 
   .sidebar-footer {
-    margin-top: auto; /* Empuja el footer hacia abajo */
+    margin-top: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem; /* Espacio entre los botones del footer */
+    gap: 0.5rem;
   }
   .collapse-btn {
     position: absolute;
-    top: 2.8rem; /* Ajusta según el padding superior del aside */
-    right: -14px; /* Ajusta para que quede sobrepuesto */
-    background-color: var(--bg-sidebar); /* Fondo circular */
-    color: var(--text-sidebar); /* Color del icono */
-    border-radius: 50%; /* Forma circular */
-    width: 32px; /* Tamaño del círculo */
-    height: 32px; /* Tamaño del círculo */
+    top: 2.8rem;
+    right: -14px;
+    background-color: var(--bg-sidebar);
+    color: var(--text-sidebar);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
     display: flex;
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Sombra */
-    z-index: 100; /* Asegura que esté encima */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 100;
     transition: right 0.3s ease, transform 0.3s ease, background-color 0.2s, color 0.2s;
-    transform: translateY(-50%); /* Centra verticalmente */
+    transform: translateY(-50%);
     padding:0px !important;
   }
 </style>

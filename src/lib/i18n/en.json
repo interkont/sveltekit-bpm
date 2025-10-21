@@ -1,0 +1,63 @@
+{
+  "process_list": {
+    "title": "Process List",
+    "description": "Monitor all active and historical process instances.",
+    "create_button": "Create new request",
+    "running_tab": "Running",
+    "historical_tab": "Historical",
+    "loading": "Loading instances...",
+    "error": "Error loading",
+    "empty": "No instances in this view.",
+    "started_by": "Started by",
+    "on": "on",
+    "view_details_button": "View Details"
+  },
+  "login": {
+    "welcome": "Welcome Back",
+    "subtitle": "Log in to continue managing your processes.",
+    "email_label": "Email Address",
+    "password_label": "Password",
+    "remember_me": "Remember me",
+    "forgot_password": "Forgot your password?",
+    "login_button": "Log In",
+    "logging_in": "Authenticating..."
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "tasks": "Tasks",
+    "cases": "Cases",
+    "processes": "Processes",
+    "teams": "Teams",
+    "logout_confirm_title": "Confirm Logout",
+    "logout_confirm_message": "Are you sure you want to log out of Flowify?",
+    "logout_button": "Log Out",
+    "expand_menu": "Expand menu",
+    "collapse_menu": "Collapse menu"
+  },
+  "profile_panel": {
+    "title": "My Profile",
+    "subtitle": "Manage your personal and security information.",
+    "personal_info": "Personal Information",
+    "change_photo": "Change Photo",
+    "name_label": "Full Name",
+    "email_label": "Email",
+    "security_title": "Security and Password",
+    "current_password": "Current Password",
+    "new_password": "New Password",
+    "confirm_password": "Confirm New Password",
+    "roles_title": "Your Roles",
+    "system_role": "System Role",
+    "process_roles": "Process Roles",
+    "no_process_roles": "You have no assigned process roles.",
+    "language_label": "Language",
+    "save_button": "Save Changes",
+    "cancel_button": "Cancel",
+    "logout_button": "Log Out"
+  },
+  "editor": {
+    "save_confirm_title": "Confirm Save",
+    "save_confirm_new": "A new process will be created with the provided data. Do you want to continue?",
+    "save_confirm_update": "All flow elements and process properties will be updated. Do you want to continue?",
+    "save_confirm_new_version": "The process is in a \"{state}\" state and has {instancesCount} created cases. A new DRAFT version will be created for you to continue editing. Do you want to continue?"
+  }
+}

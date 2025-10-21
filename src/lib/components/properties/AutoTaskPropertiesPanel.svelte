@@ -4,6 +4,7 @@
   import BasicPropertiesPanel from './BasicPropertiesPanel.svelte';
 
   export let node: Node;
+  export let disabled: boolean = false;
 
   const dispatch = createEventDispatcher();
 
@@ -20,7 +21,7 @@
   }
 </script>
 
-<BasicPropertiesPanel {node} on:update />
+<BasicPropertiesPanel {node} on:update {disabled} />
 
 <hr class="divider" />
 
@@ -33,6 +34,7 @@
       bind:value={webhook}
       on:blur={handleWebhookUpdate}
       placeholder="https://your-automation-url.com/..."
+      {disabled}
     />
     <small>Enter the full URL of the webhook to be triggered.</small>
   </div>
@@ -44,6 +46,10 @@
   label { font-weight: 500; font-size: 14px;}
   input { width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
   input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+  input:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
   small { font-size: 12px; color: #6b7280; }
   input,textarea,select {background-color: var(--bg-secondary);}
 </style>

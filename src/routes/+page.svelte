@@ -17,6 +17,7 @@
 	import TaskListView from '$lib/components/TaskListView.svelte';
 	import ProcessListView from '$lib/components/ProcessListView.svelte';
 	import NewProcessView from '$lib/components/NewProcessView.svelte';
+	import ProcessEditorView from '$lib/components/ProcessEditorView.svelte';
 	import ProcessModelListView from '$lib/components/ProcessModelListView.svelte';
     import UserManagementView from '$lib/components/UserManagementView.svelte';
 	import StartProcessFormView from '$lib/components/StartProcessFormView.svelte';
@@ -24,19 +25,21 @@
 	// Paneles de Detalle
 	import TaskDetailPanel from '$lib/components/TaskDetailPanel.svelte';
 	import ProcessDetailView from '$lib/components/ProcessDetailView.svelte';
-	import ProcessModelDetailView from '$lib/components/ProcessModelDetailView.svelte';
 	
 	// --- ADD: Global UI Components ---
 	import Toast from '$lib/components/Toast.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	
 	let currentView = 'dashboard';
+	let viewParams: string | null = null;
 	let viewContext: any = null; 
 
 	$: {
 		if (typeof window !== 'undefined') {
 			const hash = $page.url.hash.substring(1);
-			currentView = hash || 'dashboard';
+			const [view, params] = hash.split('/');
+			currentView = view || 'dashboard';
+			viewParams = params || null;
 		}
 	}
 
@@ -71,7 +74,11 @@
 		{:else if currentView === 'process-models'}
 			<ProcessModelListView />
 		{:else if currentView === 'new-process-model'}
-			<NewProcessView />
+			<ProcessEditorView />
+		{:else if currentView === 'process-model-detail' && viewParams}
+			<ProcessEditorView processId={Number(viewParams)} />
+		{:else if currentView === 'new-process'}
+			<NewProcessView on:navigate={handleNavigation} />
 		{:else if currentView === 'start-process-form'}
 			<StartProcessFormView processDefinition={viewContext as ProcessDefinition} on:navigate={handleNavigation} />
 		{:else if currentView === 'users'} 
@@ -85,9 +92,5 @@
 
 	{#if $processDetailStore.isOpen}
 		<ProcessDetailView />
-	{/if}
-
-	{#if $processModelDetailStore.isOpen && $processModelDetailStore.model}
-		<ProcessModelDetailView model={$processModelDetailStore.model} />
 	{/if}
 {/if}

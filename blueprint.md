@@ -229,3 +229,60 @@ Los siguientes módulos ahora operan con datos 100% reales provenientes del back
     - **Formulario de Tarea Dinámico:** Al abrir el panel de una tarea, se llama a `GET /api/tasks/:id/form` para obtener la definición del formulario.
     - El `TaskDetailPanel` renderiza los campos del formulario, respetando los valores pre-poblados y el estado de solo lectura (`isReadonly`).
     - **Completar Tarea:** El formulario permite al usuario seleccionar una acción y añadir comentarios, y envía la información al endpoint `POST /api/tasks/:id/complete` para avanzar el proceso.
+
+---
+
+## 11. Fase 3: Refactorización a Modelador Nativo con Svelte Flow
+
+En esta fase, el proyecto realizó un pivote estratégico, abandonando la librería `bpmn-js` en favor de una solución de modelado nativa, más ligera y alineada con la arquitectura de Svelte, utilizando **`@xyflow/svelte`**. El objetivo fue eliminar la dependencia del estándar BPMN 2.0 XML y trabajar directamente con un modelo de datos JSON que mapea 1 a 1 con la estructura de la base de datos del backend.
+
+### 11.1. Arquitectura y Funcionalidades Clave
+
+- **Proveedor Global (`SvelteFlowProvider`):** La aplicación principal se envolvió en este proveedor en `src/routes/+page.svelte`, haciendo que el contexto de Svelte Flow (hooks como `useSvelteFlow`) esté disponible en todas las vistas, crucial para el funcionamiento del editor.
+
+- **Vista del Editor (`NewProcessView.svelte`):** Este componente se convirtió en el centro neurálgico del modelador, integrando:
+  - **Paleta de Nodos:** Un `PaletteSidebar` con 6 tipos de nodos arrastrables (Start, End, User Task, Auto Task, Exclusive Gateway, Parallel Gateway).
+  - **Lienzo Interactivo:** Un lienzo de Svelte Flow que soporta la adición de nodos por `drag-and-drop`, creación de conexiones, y selección y eliminación de elementos (nodos y flechas).
+  - **Paneles de Propiedades Dinámicos:** Una columna de propiedades que renderiza un panel específico según el elemento seleccionado:
+    - **Panel de Proceso (Default):** Permite editar metadatos del proceso como `name`, `description`, `category` y `status`.
+    - **Paneles de Nodos:** Paneles para `UserTask`, `AutoTask`, `Gateways`, etc., permitiendo configurar sus propiedades (rol, webhook, etiqueta, descripción, ID).
+    - **Panel de Flechas (`Edge`):** Panel para secuencias de flujo, que muestra un campo para la `condition` si la flecha sale de un `ExclusiveGateway`.
+
+- **Comunicación por Contexto y Stores:** Se implementó un sistema de comunicación robusto y desacoplado:
+  - Un contexto de Svelte (`dnd-context`) para gestionar el estado del `drag-and-drop` entre la paleta y el lienzo.
+  - Stores de Svelte (`writable`) para gestionar el estado de los nodos, las flechas y los metadatos del proceso.
+
+### 11.2. Mejoras de UX y Lógica de Negocio
+
+- **Flujos Condicionales:** Las condiciones se movieron de los nodos `Gateway` a las **flechas**, alineándose con el backend. Las flechas que salen de un `ExclusiveGateway` ahora tienen un estilo visual proactivo:
+  - **Rojo y punteado:** Si la condición está vacía, alertando al usuario.
+  - **Azul y sólido:** Si la condición ha sido rellenada.
+- **Roles en Nodos:** Los nodos `UserTask` y `StartEvent` muestran un badge con el rol asignado, cargado dinámicamente desde el backend a través del `processRoleStore`.
+- **Modo Oscuro:** Se integró el `colorMode` de Svelte Flow con el `theme` store existente en la aplicación, logrando una consistencia visual completa en ambos temas.
+- **Flujo de Guardado:** Se implementó un flujo de guardado que, a través de un botón "Guardar", utiliza un modal de confirmación (`ConfirmModal`) y notificaciones (`Toast`) para recolectar todos los datos del modelo (metadatos, nodos y flechas) en un único `payload` JSON, listo para ser enviado al backend.
+
+Con estos cambios, la maqueta del modelador se considera funcionalmente completa para la creación de nuevos procesos, finalizando la Fase 3 del desarrollo del frontend.
+
+### 11.1. Nota de Corrección: Restauración de `NewProcessView`
+
+Durante la implementación inicial de la Fase 3, el componente `NewProcessView.svelte` fue erróneamente modificado para albergar el nuevo editor de modelos. Este fue un error conceptual, ya que la función original de `NewProcessView` (documentada en la Fase 2) es la de listar procesos para **iniciar una nueva instancia**, no para **modelar una nueva definición**.
+
+Este error fue identificado y corregido. La funcionalidad del editor de modelos se consolidó en su propia vista (`/#new-process-model`), y los archivos `NewProcessView.svelte` y `src/routes/+page.svelte` fueron restaurados a su estado funcional anterior, preservando la capacidad de iniciar nuevos procesos. Esta corrección asegura la coherencia del proyecto y separa correctamente las responsabilidades de cada componente.
+
+---
+
+## 12. Internacionalización (i18n)
+
+Se ha implementado una estrategia de internacionalización gradual utilizando la librería `svelte-i18n` para permitir que la aplicación soporte múltiples idiomas.
+
+- **Dependencia:** `svelte-i18n`
+- **Configuración:**
+  - **Archivos de Idioma:** Se han creado archivos JSON para cada idioma en `src/lib/i18n/` (e.g., `es.json`, `en.json`).
+  - **Inicialización:** Un archivo `src/lib/i18n/index.ts` centraliza la configuración, registrando los idiomas y estableciendo `es` como el idioma por defecto (`fallbackLocale`).
+  - **Carga Global:** La librería se inicializa en el layout raíz (`src/routes/+layout.svelte`) para asegurar que el contexto de i18n esté disponible globalmente. Se utiliza `waitLocale()` para prevenir que la aplicación se renderice antes de que se haya cargado el archivo de idioma inicial.
+
+- **Patrón de Uso:**
+  - **Importación:** En cada componente, se debe importar el store `_` de `svelte-i18n`.
+  - **Sintaxis:** Los textos estáticos se reemplazan con `{$_('clave.de.traduccion')}`.
+  - **Ejemplo:** `<h2>{$_('process_list.title')}</h2>`
+- **Migración Gradual:** La estrategia consiste en migrar componentes uno por uno, comenzando con `ProcessListView.svelte` como prueba de concepto. Este enfoque permite una transición suave sin interrumpir el desarrollo.

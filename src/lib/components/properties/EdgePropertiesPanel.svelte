@@ -4,6 +4,7 @@
 
   export let edge: Edge;
   export let nodes: Node[];
+  export let disabled: boolean = false;
 
   const dispatch = createEventDispatcher();
 
@@ -44,6 +45,7 @@
         bind:value={condition}
         on:blur={handleUpdate}
         placeholder={'e.g., ${amount > 1000}'}
+        {disabled}
       />
       <small>This condition is evaluated if the flow comes from a gateway.</small>
     </div>
@@ -73,6 +75,10 @@
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
   }
   .readonly-input { cursor: not-allowed; color: var(--text-secondary); }
+  input:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
   small {
     margin-top: 0.375rem;
     font-size: 12px;
