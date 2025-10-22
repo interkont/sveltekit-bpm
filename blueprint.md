@@ -286,3 +286,24 @@ Se ha implementado una estrategia de internacionalización gradual utilizando la
   - **Sintaxis:** Los textos estáticos se reemplazan con `{$_('clave.de.traduccion')}`.
   - **Ejemplo:** `<h2>{$_('process_list.title')}</h2>`
 - **Migración Gradual:** La estrategia consiste en migrar componentes uno por uno, comenzando con `ProcessListView.svelte` como prueba de concepto. Este enfoque permite una transición suave sin interrumpir el desarrollo.
+
+---
+
+## 13. Mejora de UX: Validación de Formularios en el Editor de Procesos
+
+Se ha implementado una validación en tiempo real en el panel de propiedades del editor de procesos para mejorar la experiencia de usuario y la integridad de los datos.
+
+- **Componentes Afectados:**
+  - `src/lib/components/ProcessEditorView.svelte`
+  - `src/lib/components/properties/ProcessPropertiesPanel.svelte`
+
+- **Lógica Implementada:**
+  1.  **Validación de Campos Obligatorios:** El `ProcessPropertiesPanel.svelte` ahora verifica que los campos "Business Process Key", "Nombre del Proceso" y "Descripción" no estén vacíos.
+  2.  **Comunicación Padre-Hijo:** El panel de propiedades emite un evento `validation` en cada cambio (`on:input`) para notificar al editor principal (`ProcessEditorView.svelte`) sobre el estado de validez del formulario.
+  3.  **Deshabilitación de Botones:**
+      - El botón "Guardar Cambios" en la barra de acciones principal se deshabilita si el formulario de propiedades del proceso no es válido.
+      - El botón "Actualizar Propiedades" dentro del propio panel también se deshabilita, asegurando una consistencia visual y funcional.
+
+- **Solución Técnica al Desafío de Reactividad:**
+  - **Problema:** Se encontró un desafío en el que la reactividad de Svelte (`$:`) no actualizaba el estado del botón local "Actualizar Propiedades" de manera consistente.
+  - **Resolución:** La solución final fue abandonar las declaraciones reactivas (`$:`) para el control del botón y, en su lugar, asignar el estado de validez **imperativamente** a una variable local (`isValid`) dentro del manejador de eventos `handleUpdate`, que se ejecuta con cada pulsación de tecla. Esto garantiza que Svelte detecte el cambio y actualice la interfaz de usuario de forma fiable.

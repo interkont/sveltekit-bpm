@@ -7,6 +7,7 @@
     type Node,
     type Edge,
     type NodeTypes,
+    type EdgeTypes,
     type NodeMouseEvent,
     MarkerType,
     type Connection,
@@ -43,6 +44,7 @@
   import BasicPropertiesPanel from '$lib/components/properties/BasicPropertiesPanel.svelte';
   import EdgePropertiesPanel from '$lib/components/properties/EdgePropertiesPanel.svelte';
   import AutoTaskPropertiesPanel from '$lib/components/properties/AutoTaskPropertiesPanel.svelte';
+  import ReconnectEdge from '$lib/components/edges/ReconnectEdge.svelte';
 
   export let processId: number | null = null;
 
@@ -96,7 +98,9 @@
         if (data.diagramJson) {
             const { nodes: loadedNodes, edges: loadedEdges, viewport } = data.diagramJson;
             nodes.set(loadedNodes || []);
-            edges.set(loadedEdges || []);
+            // Asegurarnos que las flechas cargadas tambien sean reconectables
+            const reconnectableEdges = (loadedEdges || []).map(edge => ({ ...edge, type: 'reconnect' }));
+            edges.set(reconnectableEdges);
             if(viewport) setTimeout(() => setViewport(viewport), 50);
         } else {
             nodes.set([ { id: `startEvent_${Date.now()}`, type: 'startEvent', data: { label: 'Start' }, position: { x: 50, y: 150 } } ]);
@@ -124,6 +128,10 @@
     exclusiveGateway: ExclusiveGatewayNode,
     autoTask: AutoTaskNode,
     parallelGateway: ParallelGatewayNode
+  };
+
+  const edgeTypes: EdgeTypes = {
+    reconnect: ReconnectEdge
   };
 
   const executeSave = async () => {
@@ -262,11 +270,24 @@
       source: connection.source!,
       target: connection.target!,
       markerEnd: { type: MarkerType.ArrowClosed },
-      data: { condition: '' }
+      data: { condition: '' },
+      type: 'reconnect' // Asignamos el tipo a las nuevas flechas
     };
     const sourceNode = get(nodes).find(n => n.id === connection.source);
     if (sourceNode?.type === 'exclusiveGateway') { newEdge.class = 'requires-condition'; }
     edges.update((eds) => addEdge(newEdge, eds));
+  }
+  
+  function handleEdgeUpdate(event: CustomEvent<{ edge: Edge; connection: Connection }>) {
+    const { edge, connection } = event.detail;
+    edges.update((eds) =>
+      eds.map((e) => {
+        if (e.id === edge.id) {
+          return { ...e, source: connection.source, target: connection.target };
+        }
+        return e;
+      })
+    );
   }
 
   function handleUpdateNode(event: CustomEvent<Record<string, any>>) {
@@ -395,6 +416,8 @@
         bind:nodes={$nodes} 
         edges={$edges}
         {nodeTypes} 
+        {edgeTypes}
+        on:edgeupdate={handleEdgeUpdate}
         onbeforedelete={onBeforeDelete}
         ondragover={onDragOver}
         ondrop={onDrop}
