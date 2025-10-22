@@ -52,7 +52,10 @@
     "language_label": "Language",
     "save_button": "Save Changes",
     "cancel_button": "Cancel",
-    "logout_button": "Log Out"
+    "logout_button": "Log Out",
+    "update_success": "Profile updated successfully.",
+    "password_mismatch": "New passwords do not match.",
+    "password_empty": "Please enter your current password to set a new one."
   },
   "editor": {
     "save_confirm_title": "Confirm Save",

@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-  import { onMount } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
 
   export let processData: {
     name: string;
@@ -14,41 +13,39 @@
   export let isNewProcess: boolean = true;
 
   const dispatch = createEventDispatcher();
-
-  let { name, description, category, status, businessProcessKey } = processData;
-
-  let currentProcessKey = processData.businessProcessKey;
   
-  // User-selectable options
   const userStatusOptions = ['DRAFT', 'ACTIVE', 'INACTIVE'];
   
-  // The full list of options, which might include a non-selectable current status
-  let allStatusOptions = [...userStatusOptions];
+  // This will be our manually controlled state variable for the button
+  let isValid = false;
+
+  function isFormValid() {
+    if (!processData) return false;
+    return processData.name.trim() !== '' && 
+           processData.businessProcessKey.trim() !== '' && 
+           processData.description.trim() !== '';
+  }
+
+  // Reactive statement to PRESERVE the 'DEPRECATED' status logic
+  $: allStatusOptions = (processData && processData.status === 'DEPRECATED')
+    ? [...userStatusOptions, 'DEPRECATED']
+    : [...userStatusOptions];
 
   onMount(() => {
-    if (status === 'DEPRECATED' && !allStatusOptions.includes('DEPRECATED')) {
-      allStatusOptions.push('DEPRECATED');
-    }
+    // Set the initial state for the button on component load
+    handleUpdate();
   });
 
   function handleUpdate() {
-    dispatch('update', { name, description, category, status, businessProcessKey });
+    // Manually assign the new value to trigger Svelte's reactivity
+    isValid = isFormValid();
+
+    // Continue to inform the parent component as it was working correctly
+    dispatch('validation', { isValid: isValid });
   }
 
   function handleSaveMetadata() {
-    handleUpdate();
     dispatch('saveMetadata');
-  }
-
-  $: if (processData.businessProcessKey !== currentProcessKey) {
-    ({ name, description, category, status, businessProcessKey } = processData);
-    currentProcessKey = processData.businessProcessKey;
-    // Re-evaluate if DEPRECATED needs to be in the list for the newly loaded process
-    if (status === 'DEPRECATED' && !allStatusOptions.includes('DEPRECATED')) {
-      allStatusOptions = [...userStatusOptions, 'DEPRECATED'];
-    } else if (status !== 'DEPRECATED') {
-      allStatusOptions = [...userStatusOptions];
-    }
   }
 </script>
 
@@ -58,10 +55,11 @@
     <input 
       id="proc-name"
       type="text" 
-      bind:value={name}
-      on:blur={handleUpdate}
+      bind:value={processData.name}
+      on:input={handleUpdate}
       placeholder="e.g., Purchase Request"
       {disabled}
+      required
     />
   </div>
 
@@ -70,12 +68,13 @@
     <input 
       id="proc-key"
       type="text" 
-      bind:value={businessProcessKey}
-      on:blur={handleUpdate}
+      bind:value={processData.businessProcessKey}
+      on:input={handleUpdate}
       readonly={!isNewProcess || disabled}
       class:readonly-input={!isNewProcess || disabled}
       placeholder="e.g., PURCHASE_REQUEST"
       {disabled}
+      required
     />
     <small>Unique identifier. Cannot be changed after creation.</small>
   </div>
@@ -84,11 +83,12 @@
     <label for="proc-desc">Description</label>
     <textarea 
       id="proc-desc"
-      bind:value={description}
-      on:blur={handleUpdate}
+      bind:value={processData.description}
+      on:input={handleUpdate}
       rows="4"
       placeholder="A brief summary of what this process does."
       {disabled}
+      required
     />
   </div>
 
@@ -97,8 +97,8 @@
     <input 
       id="proc-category"
       type="text" 
-      bind:value={category}
-      on:blur={handleUpdate}
+      bind:value={processData.category}
+      on:input={handleUpdate}
       placeholder="e.g., Finance"
       {disabled}
     />
@@ -108,12 +108,12 @@
     <label for="proc-status">Status</label>
     <select 
       id="proc-status"
-      bind:value={status}
+      bind:value={processData.status}
       on:change={handleUpdate}
       {disabled}
     >
       {#each allStatusOptions as option}
-        <option value={option} disabled={option === 'DEPRECATED' && status !== 'DEPRECATED'}>
+        <option value={option} disabled={option === 'DEPRECATED' && processData.status !== 'DEPRECATED'}>
           {option}
         </option>
       {/each}
@@ -121,7 +121,7 @@
   </div>
 
   {#if !disabled && !isNewProcess}
-    <button class="save-metadata-btn" on:click={handleSaveMetadata}>
+    <button class="save-metadata-btn" on:click={handleSaveMetadata} disabled={!isValid}>
       Actualizar Propiedades
     </button>
   {/if}
@@ -165,4 +165,5 @@
     cursor: pointer;
   }
   .save-metadata-btn:hover { background-color: #059669; }
+  .save-metadata-btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
 </style>

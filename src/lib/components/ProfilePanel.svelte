@@ -1,24 +1,21 @@
 <script lang="ts">
   import { slide } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
-  import { createEventDispatcher } from 'svelte';
   import { profilePanelStore } from '$lib/stores/profilePanelStore';
   import Icon from '$lib/components/Icon.svelte';
   import { authStore } from '$lib/stores/authStore';
   import { authService } from '$lib/services/authService';
   import { _, locale } from 'svelte-i18n';
-
-  const dispatch = createEventDispatcher<{
-    submit: { name: string; email: string };
-  }>();
+  import { toast } from '$lib/stores/toast';
 
   let formData = { 
-    name: $authStore.user?.fullName || '', 
+    fullName: $authStore.user?.fullName || '', 
     email: $authStore.user?.email || '' 
   };
-  let currentPassword = '';
+  let oldPassword = '';
   let newPassword = '';
   let confirmPassword = '';
+  let isLoading = false;
 
   // Reactive subscription to locale changes
   locale.subscribe((newLocale) => {
@@ -27,8 +24,41 @@
     }
   });
 
-  function handleSubmit() {
-    dispatch('submit', { name: formData.name, email: formData.email });
+  async function handleSubmit() {
+    isLoading = true;
+
+    if (newPassword && newPassword !== confirmPassword) {
+      toast.show($_('profile_panel.password_mismatch'), 'error');
+      isLoading = false;
+      return;
+    }
+    
+    if (newPassword && !oldPassword) {
+      toast.show($_('profile_panel.password_empty'), 'error');
+      isLoading = false;
+      return;
+    }
+    
+    try {
+      const payload = {
+        fullName: formData.fullName,
+        email: formData.email,
+        ...(newPassword && { oldPassword, newPassword }) 
+      };
+
+      await authService.updateProfile(payload);
+      
+      toast.show($_('profile_panel.update_success'));
+      profilePanelStore.set(false);
+      // Reset password fields after successful submission
+      oldPassword = '';
+      newPassword = '';
+      confirmPassword = '';
+    } catch (error) {
+      // Error toast is already shown by apiService
+    } finally {
+      isLoading = false;
+    }
   }
 
   function handleLogout() {
@@ -67,7 +97,7 @@
           </div>
           <div class="form-field">
             <label for="fullName">{$_('profile_panel.name_label')}</label>
-            <input type="text" id="fullName" bind:value={formData.name}>
+            <input type="text" id="fullName" bind:value={formData.fullName} disabled={isLoading}>
           </div>
           <div class="form-field">
             <label for="email">{$_('profile_panel.email_label')}</label>
@@ -75,7 +105,7 @@
           </div>
            <div class="form-field">
               <label for="language">{$_('profile_panel.language_label')}</label>
-              <select id="language" bind:value={$locale}>
+              <select id="language" bind:value={$locale} disabled={isLoading}>
                   <option value="es">Español</option>
                   <option value="en">English</option>
               </select>
@@ -86,15 +116,15 @@
           <h3>{$_('profile_panel.security_title')}</h3>
            <div class="form-field">
             <label for="currentPassword">{$_('profile_panel.current_password')}</label>
-            <input type="password" id="currentPassword" placeholder="••••••••" bind:value={currentPassword}>
+            <input type="password" id="currentPassword" placeholder="••••••••" bind:value={oldPassword} disabled={isLoading}>
           </div>
            <div class="form-field">
             <label for="newPassword">{$_('profile_panel.new_password')}</label>
-            <input type="password" id="newPassword" placeholder="Mínimo 8 caracteres" bind:value={newPassword}>
+            <input type="password" id="newPassword" placeholder="Mínimo 8 caracteres" bind:value={newPassword} disabled={isLoading}>
           </div>
            <div class="form-field">
             <label for="confirmPassword">{$_('profile_panel.confirm_password')}</label>
-            <input type="password" id="confirmPassword" placeholder="Repite la nueva contraseña" bind:value={confirmPassword}>
+            <input type="password" id="confirmPassword" placeholder="Repite la nueva contraseña" bind:value={confirmPassword} disabled={isLoading}>
           </div>
         </div>
       </div>
@@ -121,12 +151,18 @@
     </div>
 
     <footer class="panel-footer">
-        <button class="logout-btn" on:click={handleLogout}>
+        <button class="logout-btn" on:click={handleLogout} disabled={isLoading}>
           <Icon name="log-out" size={16}/> {$_('profile_panel.logout_button')}
         </button>
         <div class="actions-right">
-          <button class="cancel-btn" on:click={() => profilePanelStore.set(false)}>{$_('profile_panel.cancel_button')}</button>
-          <button class="submit-btn" on:click={handleSubmit}>{$_('profile_panel.save_button')}</button>
+          <button class="cancel-btn" on:click={() => profilePanelStore.set(false)} disabled={isLoading}>{$_('profile_panel.cancel_button')}</button>
+          <button class="submit-btn" on:click={handleSubmit} disabled={isLoading}>
+            {#if isLoading}
+              <span class="loader"></span>
+            {:else}
+              {$_('profile_panel.save_button')}
+            {/if}
+          </button>
         </div>
     </footer>
   </aside>
@@ -195,4 +231,21 @@ button { cursor: pointer; font-weight: 500; padding: 0.75rem 1.5rem; border-radi
 .submit-btn { background-color: var(--accent-color); color: white; }
 .logout-btn { background-color: #f5656520; color: var(--text-primary); border-color: transparent; }
 .logout-btn:hover { background-color: #f5656540; }
+
+/* Loader for submit button */
+.loader {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #FFF;
+    border-bottom-color: transparent;
+    border-radius: 50%;
+    display: inline-block;
+    box-sizing: border-box;
+    animation: rotation 1s linear infinite;
+}
+
+@keyframes rotation {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
 </style>

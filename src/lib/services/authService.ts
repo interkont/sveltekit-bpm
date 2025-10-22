@@ -1,4 +1,4 @@
-import { post, setAuthToken } from './apiService';
+import { post, put, setAuthToken } from './apiService';
 import type { User } from '$lib/types'; // Assuming your User type is defined here
 import { authStore } from '$lib/stores/authStore'; // We'll use a dedicated auth store
 
@@ -12,6 +12,14 @@ interface LoginCredentials {
 interface LoginResponse {
   user: User;
   token: string;
+}
+
+// Interface for the profile update payload
+interface UpdateProfilePayload {
+  fullName: string;
+  email: string;
+  oldPassword?: string;
+  newPassword?: string;
 }
 
 class AuthService {
@@ -82,6 +90,36 @@ class AuthService {
           this.logout();
         }
       }
+    }
+  }
+    /**
+   * Updates the user's profile information.
+   * @param payload The data to update.
+   * @returns The updated user information.
+   */
+  async updateProfile(payload: UpdateProfilePayload): Promise<User> {
+    try {
+      const updatedData = await put<Partial<User>>('/auth/profile', payload);
+      
+      authStore.updateUser(updatedData);
+
+      // We need to get the updated user from the store to save it to localStorage
+      let userToSave: User | null = null;
+      const unsubscribe = authStore.subscribe(state => {
+        userToSave = state.user;
+      });
+      unsubscribe(); // Unsubscribe immediately to avoid memory leaks
+
+      if (userToSave && typeof window !== 'undefined') {
+        localStorage.setItem('user', JSON.stringify(userToSave));
+      } else {
+        throw new Error('Failed to retrieve updated user from the store.');
+      }
+      
+      return userToSave;
+    } catch (error) {
+      console.error('Profile update failed:', error);
+      throw error;
     }
   }
 }

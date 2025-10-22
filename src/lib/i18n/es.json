@@ -52,7 +52,10 @@
     "language_label": "Idioma",
     "save_button": "Guardar Cambios",
     "cancel_button": "Cancelar",
-    "logout_button": "Cerrar Sesión"
+    "logout_button": "Cerrar Sesión",
+    "update_success": "Perfil actualizado correctamente.",
+    "password_mismatch": "Las nuevas contraseñas no coinciden.",
+    "password_empty": "Por favor, introduce tu contraseña actual para establecer una nueva."
   },
   "editor": {
     "save_confirm_title": "Confirmar Guardado",

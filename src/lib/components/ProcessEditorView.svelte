@@ -1,5 +1,20 @@
 <script lang="ts">
-  import { SvelteFlow, Controls, Background, useSvelteFlow, type Node, type Edge, type NodeTypes, type NodeMouseEvent, MarkerType, type Connection, addEdge, type EdgeMouseEvent } from '@xyflow/svelte';
+  import {
+    SvelteFlow,
+    Controls,
+    Background,
+    useSvelteFlow,
+    type Node,
+    type Edge,
+    type NodeTypes,
+    type NodeMouseEvent,
+    MarkerType,
+    type Connection,
+    addEdge,
+    type EdgeMouseEvent,
+    type OnBeforeDelete,
+    getConnectedEdges,
+  } from '@xyflow/svelte';
   import { setContext, onMount } from 'svelte';
   import { writable, get } from 'svelte/store';
   import '@xyflow/svelte/dist/style.css';
@@ -34,6 +49,7 @@
   let mode = writable<'create' | 'view' | 'edit'>('create');
   let isLoading = writable(true);
   let isSaving = writable(false);
+  let isProcessPropertiesValid = writable(false);
   let bpmnProcessId: string | undefined = undefined;
 
   const processDefinition = writable<ProcessDefinitionData>({
@@ -283,6 +299,10 @@
     processDefinition.update(pd => ({ ...pd, ...event.detail }));
   }
 
+  function handleValidation(event: CustomEvent<{ isValid: boolean }>) {
+    isProcessPropertiesValid.set(event.detail.isValid);
+  }
+
   function onDragOver(event: DragEvent) {
     event.preventDefault();
     if (event.dataTransfer) { event.dataTransfer.dropEffect = 'move'; }
@@ -311,6 +331,23 @@
     nodes.update((n) => [...n, newNode]);
     dndType.set(null);
   }
+
+  const onBeforeDelete: OnBeforeDelete = ({ nodes: nodesToRemove, edges: edgesToRemove }) => {
+    
+    const currentNodes = get(nodes);
+    const currentEdges = get(edges);
+
+    const connectedEdges = getConnectedEdges(nodesToRemove, currentEdges);
+
+    const nodesToUpdate = currentNodes.filter((node) => !nodesToRemove.some((n) => n.id === node.id));
+    const edgesToUpdate = currentEdges.filter(
+      (edge) =>
+        !edgesToRemove.some((e) => e.id === edge.id) && !connectedEdges.some((ce) => ce.id === edge.id)
+    );
+    nodes.set(nodesToUpdate);
+    edges.set(edgesToUpdate);
+    return false;
+  };
 </script>
 
 <svelte:window on:keydown={handleKeyDown} />
@@ -339,7 +376,7 @@
             {#if processId}
               <button class="delete-btn" on:click={handleDelete} disabled={$isSaving}>Eliminar</button>
             {/if}
-            <button class="save-btn" on:click={handleSave} disabled={$isSaving}>
+            <button class="save-btn" on:click={handleSave} disabled={$isSaving || !$isProcessPropertiesValid}>
                 {$isSaving ? 'Guardando...' : 'Guardar Cambios'}
             </button>
         {/if}
@@ -356,8 +393,9 @@
     {:else if isBrowser}
       <SvelteFlow 
         bind:nodes={$nodes} 
-        edges={$edges} 
+        edges={$edges}
         {nodeTypes} 
+        onbeforedelete={onBeforeDelete}
         ondragover={onDragOver}
         ondrop={onDrop}
         onnodeclick={onNodeClick}
@@ -403,6 +441,7 @@
         isNewProcess={!processId}
         on:update={handleProcessUpdate}
         on:saveMetadata={handleSaveMetadata}
+        on:validation={handleValidation}
         disabled={$mode === 'view'} 
       />
     {/if}
@@ -454,7 +493,7 @@
 
   .action-bar h1 { font-size: 1.5rem; font-weight: 600; margin: 0; }
   .save-btn {
-    background-color: #2563eb;
+    background-color: var(--accent-color);
     color: white;
     border: none;
     padding: 0.6rem 1.2rem;
@@ -462,7 +501,7 @@
     font-weight: 500;
     cursor: pointer;
   }
-  .save-btn:hover { background-color: #1d4ed8; }
+  .save-btn:hover { opacity: 0.9; }
   .save-btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
 
   .edit-btn {
@@ -476,18 +515,9 @@
   }
   .edit-btn:hover { background-color: #4338ca; }
 
-  .delete-btn {
-    background-color: #dc2626;
-    color: white;
-    border: none;
-    padding: 0.6rem 1.2rem;
-    border-radius: 6px;
-    font-weight: 500;
-    cursor: pointer;
-  }
-  .delete-btn:hover { background-color: #b91c1c; }
+  .delete-btn { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 0.9rem 0.9rem; font-weight: 600; display: inline-flex; align-items: center; transition: color 0.2s; border-radius: 8px; }
+  .delete-btn:hover { color: #e53e3e; background-color: rgba(229, 62, 62, 0.1); }
   .delete-btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
-
 
   :global(.palette) { grid-row: 2; }
   .canvas-container { grid-row: 2; }
