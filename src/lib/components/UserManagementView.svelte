@@ -12,12 +12,16 @@
   import RoleEditPanel from '$lib/components/role-management/RoleEditPanel.svelte';
   import type { User, ProcessRole } from '$lib/types';
   import { slide } from 'svelte/transition';
+  import { _ } from 'svelte-i18n';
 
   let searchTerm = '';
-  let activeTab: string = 'Gestión de Usuarios';
-  const tabItems = ['Gestión de Usuarios', 'Gestión de Roles'];
+  let activeTab: string = 'users';
+  
+  $: tabItems = [
+    { key: 'users', label: $_('concepts.user_plural') },
+    { key: 'roles', label: $_('concepts.role_plural') }
+  ];
 
-  // Estado para los paneles
   let selectedUser: User | {} | null = null;
   let selectedRole: ProcessRole | {} | null = null;
   let roleForAddingMembers: ProcessRole | null = null;
@@ -33,22 +37,13 @@
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Derivación reactiva para mapear `role.key` a `role.name`
   $: processRoleNameMap = $processRoleStore.roles.reduce((acc, role) => {
     acc[role.key] = role.name;
     return acc;
   }, {} as { [key: string]: string });
 
-  // --- Manejadores de eventos ---
-  function handleTabChange(event: CustomEvent) {
-    activeTab = event.detail.tab;
-
-    if (activeTab === 'Gestión de Roles') {
-      // console.log('--- Debug al hacer clic en Tab de Roles ---');
-      // console.log('Estado de userStore:', $userStore);
-      // console.log('Estado de processRoleStore:', $processRoleStore);
-      // console.log(`¿Hay usuarios? ${$userStore.users.length > 0}`, `¿Hay roles? ${$processRoleStore.roles.length > 0}`);
-    }
+  function handleTabChange(event: CustomEvent<{ tab: { key: string; label: string } }>) {
+    activeTab = event.detail.tab.key;
   }
 
   async function handleSelectUser(user: User | {}) {
@@ -60,7 +55,7 @@
       const detailedUser = await userStore.fetchUserById(user.id);
       selectedUser = detailedUser;
     } catch (error) {
-      toast.show('No se pudieron cargar los detalles del usuario.', 'error');
+      toast.show($_('user_management.load_user_details_error'), 'error');
     }
   }
 
@@ -70,14 +65,14 @@
   
   function handleDeleteUser(user: User) {
     modal.show({
-      title: 'Eliminar Usuario',
-      message: `¿Estás seguro de que deseas eliminar a ${user.fullName}? Esta acción no se puede deshacer.`,
+      title: `${$_('user_management.delete_button')} ${$_('concepts.user_singular')}`,
+      message: $_('user_management.delete_user_confirm_message', { values: { name: user.fullName } }),
       onConfirm: async () => {
         try {
           await userStore.deleteUser(user.id);
-          toast.show('Usuario eliminado con éxito.', 'success');
+          toast.show($_('user_management.delete_user_success'), 'success');
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'No se pudo eliminar el usuario';
+          const message = error instanceof Error ? error.message : $_('user_management.delete_user_error');
           toast.show(message, 'error');
         }
       },
@@ -104,25 +99,20 @@
 <div class="view-container">
   <header class="view-header">
     <div>
-      <h1 class="view-title">Administración</h1>
-      <p class="view-subtitle">
-        Gestiona usuarios, roles y permisos de la plataforma.
-      </p>
+      <h1 class="header-title">{$_('sidebar.teams')}</h1>
+      <p class="header-description">{$_('user_management.description')}</p>
     </div>
     <div class="actions">
-      <!-- Botón para añadir Usuario -->
-      {#if activeTab === 'Gestión de Usuarios'}
+      {#if activeTab === 'users'}
         <button class="btn btn-primary" on:click={() => handleSelectUser({})}>
           <Icon name="plus" size={18} class="-ml-1 mr-2" />
-          Añadir Usuario
+          {$_('user_management.add_user_button')}
         </button>
       {/if}
-
-      <!-- Botón para añadir Rol -->
-      {#if activeTab === 'Gestión de Roles'}
+      {#if activeTab === 'roles'}
         <button class="btn btn-primary" on:click={() => handleSelectRole({ detail: { role: {} } })}>
           <Icon name="plus" size={18} class="-ml-1 mr-2" />
-          Agregar Rol
+          {$_('user_management.add_role_button')}
         </button>
       {/if}
     </div>
@@ -134,15 +124,15 @@
     {#if ($userStore.loading && $userStore.users.length === 0) || ($processRoleStore.loading && $processRoleStore.roles.length === 0)}
       <div class="state-placeholder">
         <Icon name="loader" size={24} spinning={true} />
-        <span>Cargando datos...</span>
+        <span>{$_('user_management.loading')}</span>
       </div>
     {:else if $userStore.error || $processRoleStore.error}
       <div class="state-placeholder error">
         <Icon name="alert-triangle" size={24} />
-        <span>Error al cargar datos: {$userStore.error || $processRoleStore.error}</span>
+        <span>{$_('user_management.error')}: {$userStore.error || $processRoleStore.error}</span>
       </div>
     {:else}
-      {#if activeTab === 'Gestión de Usuarios'}
+      {#if activeTab === 'users'}
         <div class="user-management-content" transition:slide|local>
           <div class="table-toolbar">
             <div class="search-container">
@@ -152,7 +142,7 @@
               <input
                 type="text"
                 class="search-input"
-                placeholder="Buscar por nombre o correo..."
+                placeholder={$_('user_management.search_placeholder')}
                 bind:value={searchTerm}
               />
             </div>
@@ -162,13 +152,23 @@
             <table class="data-table">
               <thead class="table-header">
                 <tr>
-                  <th>Nombre</th>
-                  <th>Rol de Sistema</th>
-                  <th>Roles de Proceso</th>
-                  <th class="text-center">Acciones</th>
+                  <th>{$_('user_management.name_header')}</th>
+                  <th>{$_('user_management.system_role_label')}</th>
+                  <th>{$_('user_management.process_roles_label')}</th>
+                  <th class="text-center">{$_('user_management.actions_header')}</th>
                 </tr>
               </thead>
               <tbody class="table-body">
+                {#if filteredUsers.length === 0}
+                  <tr>
+                    <td colspan="4">
+                      <div class="state-placeholder">
+                        <Icon name="users" size={24} />
+                        <span>{$_('user_management.empty_users')}</span>
+                      </div>
+                    </td>
+                  </tr>
+                {/if}
                 {#each filteredUsers as user (user.id)}
                   <tr class="table-row">
                     <td class="cell-primary">
@@ -177,8 +177,8 @@
                           <div>
                             <div class="list-name flex items-center">
                               {user.fullName}
-                              {#if user.status === 'pending'}
-                                <span class="ml-3 px-2 py-px text-xs font-semibold rounded-full uppercase bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">Pendiente</span>
+                              {#if user.status === 'PENDING'}
+                                <span class="ml-3 px-2 py-px text-xs font-semibold rounded-full uppercase bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">{$_('user_management.pending_status')}</span>
                               {/if}
                             </div>
                             <div class="text-secondary">{user.email}</div>
@@ -199,10 +199,10 @@
                     </td>
                     <td class="text-center">
                       <div class="flex items-center justify-center gap-2">
-                        <button class="btn-icon" on:click={() => handleSelectUser(user)} title="Editar usuario">
+                        <button class="btn-icon" on:click={() => handleSelectUser(user)} title={$_('user_management.edit_user_tooltip')}>
                           <Icon name="edit" />
                         </button>
-                        <button class="btn-icon btn-icon-danger" on:click={() => handleDeleteUser(user)} title="Eliminar usuario">
+                        <button class="btn-icon btn-icon-danger" on:click={() => handleDeleteUser(user)} title={$_('user_management.delete_user_tooltip')}>
                           <Icon name="x" />
                         </button>
                       </div>
@@ -215,7 +215,7 @@
         </div>
       {/if}
 
-      {#if activeTab === 'Gestión de Roles'}
+      {#if activeTab === 'roles'}
         <div transition:slide|local>
           <RoleManagementContent on:addmember={handleOpenAddMemberPanel} on:editrole={handleSelectRole} />
         </div>
@@ -239,28 +239,14 @@
 
 <style scoped>
   .view-container {
-    padding: 2rem;
+    padding: 0;
     height: 100%;
     display: flex;
     flex-direction: column;
   }
-
+  
   .view-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-  }
-
-  .view-title {
-    font-size: 1.875rem; /* 30px */
-    font-weight: 700;
-  }
-
-  .view-subtitle {
-    margin-top: 0.5rem;
-    font-size: 1rem; /* 16px */
-    color: var(--text-secondary);
+    margin-bottom: 0;
   }
 
   .actions .btn-primary {
@@ -286,6 +272,7 @@
     flex-grow: 1;
     display: flex;
     flex-direction: column;
+    padding: 1.5rem 2rem;
   }
   
   .state-placeholder {

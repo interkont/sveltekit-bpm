@@ -169,4 +169,24 @@
   .text-center {
     text-align: center !important;
   }
+  .btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+  }
+  .btn-icon:hover {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+  .btn-icon-danger:hover {
+    color: #e53e3e; /* text-red-600 */
+    background-color: rgba(229, 62, 62, 0.1);
+  }
 </style>

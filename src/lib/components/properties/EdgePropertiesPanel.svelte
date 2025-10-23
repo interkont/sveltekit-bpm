@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import type { Edge, Node } from '@xyflow/svelte';
+  import { _ } from 'svelte-i18n';
 
   export let edge: Edge;
   export let nodes: Node[];
@@ -38,16 +39,16 @@
 
   {#if isFromExclusiveGateway}
     <div class="form-group">
-      <label for="edge-condition">Condition Expression</label>
+      <label for="edge-condition">{$_('editor.condition_label')}</label>
       <input 
         id="edge-condition"
         type="text" 
         bind:value={condition}
         on:blur={handleUpdate}
-        placeholder={'e.g., ${amount > 1000}'}
+        placeholder={$_('editor.condition_placeholder')}
         {disabled}
       />
-      <small>This condition is evaluated if the flow comes from a gateway.</small>
+      <small>{$_('editor.condition_helper')}</small>
     </div>
   {/if}
 </div>

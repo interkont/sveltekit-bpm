@@ -1,22 +1,29 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
 
-  // Prop: Un array de strings con los nombres de las pestañas.
-  export let items: string[] = [];
+  // --- MODIFICACIÓN ---
+  // Ahora `items` puede ser un array de strings o de objetos con `key` y `label`.
+  export let items: (string | { key: string; label: string })[] = [];
   
-  // Estado: Mantiene el registro de la pestaña activa actualmente.
-  let activeItem: string = items[0];
+  // El estado interno ahora maneja el objeto completo si es el caso.
+  let activeItem: string | { key: string; label: string } = items[0];
 
   const dispatch = createEventDispatcher();
 
-  function selectItem(item: string) {
+  function selectItem(item: string | { key: string; label: string }) {
     if (item !== activeItem) {
       activeItem = item;
-      // Despacha un evento para que el componente padre sepa que la pestaña ha cambiado.
+      // El evento despachado sigue devolviendo el objeto completo para máxima información.
       dispatch('tabChange', {
         tab: item
       });
     }
+  }
+
+  // --- NUEVA FUNCIÓN ---
+  // Función helper para obtener el valor a mostrar en la UI.
+  function getLabel(item: string | { key: string; label: string }): string {
+    return typeof item === 'object' ? item.label : item;
   }
 </script>
 
@@ -26,7 +33,8 @@
       class="tab-item" 
       class:active={activeItem === item} 
       on:click={() => selectItem(item)}>
-      {item}
+      <!-- Usamos la función getLabel para mostrar el texto correcto -->
+      {getLabel(item)}
     </button>
   {/each}
 </div>
@@ -35,7 +43,6 @@
   .tabs-container {
     display: flex;
     border-bottom: 2px solid var(--border-color);
-    margin-bottom: 2rem;
   }
 
   .tab-item {
@@ -47,7 +54,7 @@
     font-size: 1rem;
     font-weight: 500;
     position: relative;
-    top: 2px; /* Alinea el borde inferior del botón con el borde del contenedor */
+    top: 2px;
     border-bottom: 2px solid transparent;
     transition: color 0.2s ease-in-out, border-color 0.2s ease-in-out;
   }

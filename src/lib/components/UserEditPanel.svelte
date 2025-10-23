@@ -8,6 +8,7 @@
   import { processRoleStore } from '$lib/stores/processRoleStore';
   import { toast } from '$lib/stores/toast';
   import { modal } from '$lib/stores/modal';
+  import { _ } from 'svelte-i18n';
 
   export let user: User | {} = {};
 
@@ -19,6 +20,7 @@
   let userData: Partial<User> = {};
   let title: string;
   let saveButtonText: string;
+  let systemRoleOptions: { value: string; label: string; }[];
 
   // This reactive block re-runs whenever the `user` prop changes.
   $: {
@@ -36,9 +38,14 @@
       userData = { processRoles: [], systemRole: 'USER' };
     }
 
-    title = isNewUser ? 'Añadir Nuevo Usuario' : 'Editar Usuario';
-    saveButtonText = isNewUser ? 'Enviar Invitación' : 'Guardar Cambios';
+    title = isNewUser ? $_('user_management.add_title', { values: { concept: $_('concepts.user_singular') } }) : $_('user_management.edit_title', { values: { concept: $_('concepts.user_singular') } });
+    saveButtonText = isNewUser ? $_('user_management.invite_button') : $_('user_management.save_button');
   }
+
+  $: systemRoleOptions = [
+    { value: 'USER', label: $_('user_management.user_option') },
+    { value: 'ADMIN', label: $_('user_management.admin_option') }
+  ];
 
   // Tailwind classes for process role tags
   const tagColors = [
@@ -60,7 +67,7 @@
 
   async function handleSave() {
     if (!userData.displayName || !userData.email) {
-      toast.show('El nombre y el correo son obligatorios.', 'error');
+      toast.show($_('user_management.validation_error'), 'error');
       return;
     }
 
@@ -84,7 +91,7 @@
         }
 
         await userStore.updateUser(userData.id!, updatePayload);
-        toast.show(`Usuario "${userData.displayName}" actualizado.`, 'success');
+        toast.show($_('user_management.update_success', { values: { concept: $_('concepts.user_singular'), name: userData.displayName } }), 'success');
 
       } else {
         // --- Create Mode (CREATE) ---
@@ -101,11 +108,11 @@
         }
         
         await userStore.createUser(createPayload as Omit<User, 'id'>);
-        toast.show(`Invitación enviada a ${userData.email}.`, 'success');
+        toast.show($_('user_management.invite_success', { values: { email: userData.email } }), 'success');
       }
       closePanel();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Ocurrió un error inesperado';
+      const message = error instanceof Error ? error.message : $_('user_management.unexpected_error');
       toast.show(message, 'error');
     }
   }
@@ -113,11 +120,11 @@
   function handleDelete() {
     if (isNewUser) return;
     modal.show({
-      title: 'Eliminar Usuario',
-      message: `¿Estás seguro de que deseas eliminar a ${userData.displayName}?`,
+      title: $_('user_management.delete_user_confirm_title'),
+      message: $_('user_management.delete_user_confirm_message', { values: { name: userData.displayName } }),
       onConfirm: () => {
         userStore.deleteUser(userData.id!);
-        toast.show(`Usuario "${userData.displayName}" eliminado.`, 'success');
+        toast.show($_('user_management.delete_success_toast', { values: { concept: $_('concepts.user_singular'), name: userData.displayName } }), 'success');
         closePanel();
       },
     });
@@ -152,25 +159,26 @@
     <div class="panel-body">
       <form on:submit|preventDefault={handleSave}>
         <div class="form-group">
-          <label for="userName" class="form-label">Nombre Completo</label>
+          <label for="userName" class="form-label">{$_('user_management.name_label')}</label>
           <input type="text" id="userName" class="form-input" bind:value={userData.displayName} required />
         </div>
 
         <div class="form-group">
-          <label for="userEmail" class="form-label">Correo Electrónico</label>
+          <label for="userEmail" class="form-label">{$_('user_management.email_label')}</label>
           <input type="email" id="userEmail" class="form-input" bind:value={userData.email} required />
         </div>
 
         <div class="form-group">
-          <label for="systemRole" class="form-label">Rol del Sistema</label>
+          <label for="systemRole" class="form-label">{$_('user_management.system_role_label')}</label>
           <select id="systemRole" class="form-input" bind:value={userData.systemRole}>
-            <option value="USER">Usuario</option>
-            <option value="ADMIN">Administrador</option>
+            {#each systemRoleOptions as option}
+              <option value={option.value}>{option.label}</option>
+            {/each}
           </select>
         </div>
 
         <div class="form-group">
-            <label class="form-label">Roles de Proceso</label>
+            <label class="form-label">{$_('user_management.process_roles_label')}</label>
             <div class="roles-container">
                 <div class="role-tags">
                     {#each assignedRoles as role (role.key)}
@@ -182,14 +190,14 @@
                         </div>
                     {/each}
                      {#if assignedRoles.length === 0}
-                        <span class="no-roles-text">Sin roles de proceso asignados.</span>
+                        <span class="no-roles-text">{$_('user_management.no_roles_assigned')}</span>
                     {/if}
                 </div>
 
                 <div class="add-role-wrapper">
                     <button type="button" class="btn btn-secondary btn-sm" on:click={() => isRoleDropdownOpen = !isRoleDropdownOpen} disabled={availableRoles.length === 0}>
                         <Icon name="plus" class="mr-1" />
-                        Añadir Rol
+                        {$_('user_management.add_role_button')}
                     </button>
                     {#if isRoleDropdownOpen}
                         <div class="role-dropdown">
@@ -198,7 +206,7 @@
                                     {role.name}
                                 </button>
                             {:else}
-                                <div class="dropdown-empty">No hay más roles para añadir</div>
+                                <div class="dropdown-empty">{$_('user_management.no_more_roles')}</div>
                             {/each}
                         </div>
                     {/if}
@@ -213,12 +221,12 @@
             {#if !isNewUser}
                 <button type="button" class="btn-subtle-danger" on:click={handleDelete}>
                     <Icon name="x" class="mr-1" />
-                    Eliminar
+                    {$_('user_management.delete_button')}
                 </button>
             {/if}
         </div>
         <div class="flex gap-4">
-            <button type="button" class="btn btn-secondary" on:click={closePanel}>Cancelar</button>
+            <button type="button" class="btn btn-secondary" on:click={closePanel}>{$_('user_management.cancel_button')}</button>
             <button type="submit" class="btn btn-primary" on:click={handleSave}>{saveButtonText}</button>
         </div>
     </footer>

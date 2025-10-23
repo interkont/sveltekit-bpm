@@ -3,6 +3,7 @@
   import { quintOut } from 'svelte/easing';
   import { processDetailStore } from '$lib/stores/processDetailStore';
   import Icon from '$lib/components/Icon.svelte';
+  import { _ } from 'svelte-i18n';
   
   import type { ProcessInstance, TimelineStep, TimelineStatus, GeneralInfoItem, Comment, DocumentGroup } from '$lib/types';
 
@@ -18,10 +19,10 @@
   // --- Helper functions ---
   function mapGeneralInfo(instance: ProcessInstance): GeneralInfoItem[] {
       return [
-          { label: 'Solicitado por', value: instance.startedByUser.fullName, icon: 'user' },
-          { label: 'Correo del Solicitante', value: instance.startedByUser.email, icon: 'at-sign' },
-          { label: 'Fecha de Inicio', value: new Date(instance.startTime).toLocaleString(), icon: 'calendar' },
-          { label: 'Estado Actual', value: instance.status, icon: 'activity' },
+          { label: $_('process_detail.requested_by'), value: instance.startedByUser.fullName, icon: 'user' },
+          { label: $_('process_detail.requester_email'), value: instance.startedByUser.email, icon: 'at-sign' },
+          { label: $_('process_detail.start_date'), value: new Date(instance.startTime).toLocaleString(), icon: 'calendar' },
+          { label: $_('process_detail.current_status'), value: instance.status, icon: 'activity' },
       ];
   }
 
@@ -31,11 +32,11 @@
       const mappedSteps = sortedTasks.map(t => ({
           taskName: t.processElement.name,
           status: (t.status === 'COMPLETED' ? 'COMPLETED' : 'PENDING') as TimelineStatus,
-          user: t.completedByUser?.fullName || 'N/A',
+          user: t.completedByUser?.fullName || $_('process_detail.not_applicable'),
           date: t.completionTime ? new Date(t.completionTime).toLocaleString() : null,
       }));
       mappedSteps.push({
-        taskName: 'Inicio de Proceso',
+        taskName: $_('process_detail.process_start'),
         status: 'COMPLETED',
         user: instance.startedByUser.fullName,
         date: new Date(instance.startTime).toLocaleString()
@@ -48,7 +49,7 @@
       return tasks
           .filter(task => typeof task.comments === 'string' && task.comments.trim() !== '')
           .map(task => ({
-              user: task.completedByUser?.fullName || 'Usuario del Sistema',
+              user: task.completedByUser?.fullName || $_('process_detail.system_user'),
               text: task.comments || '',
               date: new Date(task.completionTime || task.createdAt).toLocaleString(),
               avatar: (task.completedByUser?.fullName || 'SYS').substring(0, 2).toUpperCase()
@@ -74,28 +75,30 @@
     {#if $processDetailStore.loading}
         <div class="state-placeholder">
             <Icon name="loader" size="32" spinning={true} />
-            <p>Cargando detalles de la instancia...</p>
+            <p>{$_('process_detail.loading')}</p>
         </div>
     {:else if $processDetailStore.error}
         <div class="state-placeholder error">
             <Icon name="alert-triangle" size="32" />
-            <p>Error al cargar: {$processDetailStore.error}</p>
+            <p>{$_('process_detail.error')}: {$processDetailStore.error}</p>
         </div>
     {:else if processInstance}
         <header class="panel-header">
-        <div>
-            <h2 title={processInstance.processDefinition.name}>{processInstance.processDefinition.name}</h2>
-            <p>ID: {processInstance.id} | Estado: <span class="status-chip">{processInstance.status}</span></p>
-        </div>
-        <button class="close-btn" on:click={processDetailStore.hide} title="Cerrar panel">
-            <Icon name="x" size={28}/>
-        </button>
+            <div>
+                <h2 class="header-title">{$_('concepts.instance_singular')} #{processInstance.id}</h2>
+                <p class="header-description" title={processInstance.processDefinition.name}>
+                {$_('concepts.process_singular')}: {processInstance.processDefinition.name}
+                </p>
+            </div>
+            <button class="close-btn" on:click={processDetailStore.hide} title={$_('process_detail.close_panel')}>
+                <Icon name="x" size={28}/>
+            </button>
         </header>
 
         <div class="panel-content">
         <div class="left-column">
             <section class="info-section">
-            <h3><Icon name="info" size={16}/> Información General</h3>
+            <h3><Icon name="info" size={16}/> {$_('process_detail.general_info_title')}</h3>
             <ul class="data-list">
                 {#each generalInfo as item}
                 <li>
@@ -111,8 +114,8 @@
 
             <section class="info-section">
             <div class="timeline-header">
-                <h3><Icon name="git-commit" size={18}/> Trazabilidad</h3>
-                <span class="progress-indicator">Paso {currentStepNumber} de {totalSteps}</span>
+                <h3><Icon name="git-commit" size={18}/> {$_('process_detail.traceability_title')}</h3>
+                <span class="progress-indicator">{$_('process_detail.step_of', { values: { current: currentStepNumber, total: totalSteps } })}</span>
             </div>
             <div class="timeline">
                 {#each timeline as step, i (step.taskName + i)}
@@ -128,7 +131,7 @@
                     <div class="timeline-content">
                     <p class="task-name">{step.taskName}</p>
                     {#if step.status === 'COMPLETED'}
-                        <span class="user-info">Completado por <strong>{step.user}</strong> el {step.date}</span>
+                        <span class="user-info">{@html $_('process_detail.completed_by_on', { values: { user: step.user, date: step.date } })}</span>
                     {/if}
                     </div>
                 </div>
@@ -140,13 +143,13 @@
         <div class="right-column">
             <div class="tab-header">
             <button class:active={activeTab === 'details'} on:click={() => activeTab = 'details'}>
-                <Icon name="file-text" size={16}/> Detalles de la Solicitud
+                <Icon name="file-text" size={16}/> {$_('process_detail.request_details_tab')}
             </button>
             <button class:active={activeTab === 'comments'} on:click={() => activeTab = 'comments'}>
-                <Icon name="message-square" size={16}/> Observaciones
+                <Icon name="message-square" size={16}/> {$_('process_detail.comments_tab')}
             </button>
             <button class:active={activeTab === 'documents'} on:click={() => activeTab = 'documents'}>
-                <Icon name="paperclip" size={16}/> Documentos
+                <Icon name="paperclip" size={16}/> {$_('process_detail.documents_tab')}
             </button>
             </div>
 
@@ -164,7 +167,7 @@
                         </div>
                         {/each}
                     {:else}
-                        <p class="no-data-placeholder">No hay datos de negocio para esta instancia.</p>
+                        <p class="no-data-placeholder">{$_('process_detail.no_business_data')}</p>
                     {/if}
                 </div>
                 </div>
@@ -184,12 +187,12 @@
                             </div>
                         {/each}
                     {:else}
-                        <p class="no-data-placeholder">No hay observaciones registradas para esta instancia.</p>
+                        <p class="no-data-placeholder">{$_('process_detail.no_comments')}</p>
                     {/if}
                 </div>
             {:else if activeTab === 'documents'}
                 <div class="documents-section">
-                    <p class="no-data-placeholder">La gestión de documentos se implementará en una futura versión.</p>
+                    <p class="no-data-placeholder">{$_('process_detail.documents_coming_soon')}</p>
                 </div>
             {/if}
             </div>
@@ -200,7 +203,6 @@
 {/if}
 
 <style>
-/* Estilos sin cambios */
 .panel-backdrop {
   position: fixed; top: 0; left: 0;
   width: 100vw; height: 100vh;
@@ -223,13 +225,35 @@
 }
 
 .panel-header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 1.5rem 2rem; border-bottom: 1px solid var(--border-color); flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
-.panel-header h2 { margin: 0; color: var(--text-primary); font-size: 1.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.panel-header p { margin: 0.25rem 0 0; color: var(--text-secondary); }
-.status-chip { background-color: #38a16920; color: #38a169; padding: 0.2rem 0.6rem; border-radius: 99px; font-weight: 500; }
-.close-btn { background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: 0.5rem; }
+
+/* Use global header styles */
+.header-title {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-description {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.close-btn { background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: 0.5rem; margin-left: 1rem; }
 .close-btn:hover { color: var(--text-primary); }
 
 .panel-content {

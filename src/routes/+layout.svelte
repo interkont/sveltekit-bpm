@@ -144,6 +144,29 @@
 		overflow-y: auto;
 		padding: 2rem;
 	}
+	
+	:global(.view-header) {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		padding-bottom: 1.5rem;
+		border-bottom: 1px solid var(--border-color);
+		margin-bottom: 1.5rem;
+	}
+
+	:global(.view-header .header-title) {
+		font-size: 2.25rem;
+		font-weight: 700;
+		color: var(--text-primary);
+		margin: 0;
+	}
+
+	:global(.view-header .header-description) {
+		font-size: 1rem;
+		color: var(--text-secondary);
+		margin-top: 0.25rem;
+	}
+	
 	:global(.list-name) {
 		font-weight: 700;
     	color: var(--text-primary);

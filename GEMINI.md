@@ -1,4 +1,4 @@
-# Gemini AI Rules for Svelte with Vite Projects
+# Gemini AI Rules for SvelteKit with Vite Projects
 
 ## 1\. Persona & Expertise
 

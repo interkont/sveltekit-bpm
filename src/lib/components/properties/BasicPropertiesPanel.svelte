@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import type { Node } from '@xyflow/svelte';
+  import { _ } from 'svelte-i18n';
 
   export let node: Node;
   export let disabled: boolean = false;
@@ -39,7 +40,7 @@
   </div>
 
   <div class="form-group">
-    <label for="node-label">Node Label</label>
+    <label for="node-label">{$_('editor.task_name_label')}</label>
     <input 
       id="node-label"
       type="text" 
@@ -51,13 +52,13 @@
 
   <!-- --- NEW: Description textarea --- -->
   <div class="form-group">
-    <label for="node-description">Description</label>
+    <label for="node-description">{$_('editor.description_label')}</label>
     <textarea 
       id="node-description"
       bind:value={description}
       on:blur={handleUpdate}
       rows="4"
-      placeholder="Add an optional description for this element..."
+      placeholder={$_('editor.description_placeholder')}
       {disabled}
     />
   </div>

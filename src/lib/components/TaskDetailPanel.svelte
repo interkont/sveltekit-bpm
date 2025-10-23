@@ -9,6 +9,7 @@
     import { taskService } from '$lib/services/taskService';
     import { toast } from '$lib/stores/toast';
     import type { Task, ProcessInstance, BusinessDataItem, GeneralInfoItem, TimelineStep, TimelineStatus, Comment, DocumentGroup, ProcessTaskInstance } from '$lib/types';
+    import { _ } from 'svelte-i18n';
 
     let activeTab: 'form' | 'details' = 'form';
     let selectedAction: string = '';
@@ -40,10 +41,10 @@
 
     function mapGeneralInfo(instance: ProcessInstance): GeneralInfoItem[] {
         return [
-            { label: 'Solicitado por', value: instance.startedByUser.fullName, icon: 'user' },
-            { label: 'Correo del Solicitante', value: instance.startedByUser.email, icon: 'at-sign' },
-            { label: 'Fecha de Inicio', value: new Date(instance.startTime).toLocaleString(), icon: 'calendar' },
-            { label: 'Estado del Proceso', value: instance.status, icon: 'activity' },
+            { label: $_('process_detail.requested_by'), value: instance.startedByUser.fullName, icon: 'user' },
+            { label: $_('process_detail.requester_email'), value: instance.startedByUser.email, icon: 'at-sign' },
+            { label: $_('process_detail.start_date'), value: new Date(instance.startTime).toLocaleString(), icon: 'calendar' },
+            { label: $_('process_detail.current_status'), value: instance.status, icon: 'activity' },
         ];
     }
 
@@ -53,11 +54,11 @@
         const mappedSteps = sortedTasks.map(t => ({
             taskName: t.processElement.name,
             status: (t.status === 'COMPLETED' ? 'COMPLETED' : 'PENDING') as TimelineStatus,
-            user: t.completedByUser?.fullName || 'N/A',
+            user: t.completedByUser?.fullName || $_('process_detail.not_applicable'),
             date: t.completionTime ? new Date(t.completionTime).toLocaleString() : null,
         }));
         mappedSteps.push({
-          taskName: 'Inicio de Proceso',
+          taskName: $_('process_detail.process_start'),
           status: 'COMPLETED',
           user: instance.startedByUser.fullName,
           date: new Date(instance.startTime).toLocaleString()
@@ -70,7 +71,7 @@
         return tasks
             .filter(task => typeof task.comments === 'string' && task.comments.trim() !== '')
             .map(task => ({
-                user: task.completedByUser?.fullName || 'Usuario del Sistema',
+                user: task.completedByUser?.fullName || $_('process_detail.system_user'),
                 text: task.comments || '',
                 date: new Date(task.completionTime || task.createdAt).toLocaleString(),
                 avatar: (task.completedByUser?.fullName || 'SYS').substring(0, 2).toUpperCase()
@@ -88,7 +89,7 @@
                 formData: formData
             };
             await taskService.completeTask(task.taskId, payload);
-            toast.show(`Tarea "${task.taskName}" completada.`, 'success');
+            toast.show(`${$_('concepts.task_singular')} "${task.taskName}" completada.`, 'success');
             taskDetailStore.hide();
             taskListStore.fetchTasks(); // Refresh the task list
         } catch (e) {
@@ -102,8 +103,8 @@
     function confirmAndSubmit() {
         if (!task) return;
         modal.show({
-            title: `Confirmar Acción: ${selectedAction}`,
-            message: `¿Estás seguro de que deseas finalizar esta tarea?`,
+            title: $_('task_detail.confirm_action_title', { values: { action: selectedAction } }),
+            message: $_('task_detail.confirm_action_message'),
             onConfirm: handleSubmit
         });
     }
@@ -126,36 +127,36 @@
     <header class="panel-header">
       {#if task}
         <div>
-          <span class="header-subtitle">Gestionando Tarea ID: {task.taskId}</span>
+          <span class="header-subtitle">{$_('task_detail.managing_task')} {$_('task_detail.id_label')}: {task.taskId}</span>
           <h2 title={task.taskName}>{task.taskName}</h2>
-          <p>del Proceso: {task.processName} (Instancia ID: {task.processInstanceId})</p>
+          <p>{$_('task_detail.of_process')}: {task.processName} ({$_('concepts.instance_singular')} {$_('task_detail.id_label')}: {task.processInstanceId})</p>
         </div>
       {/if}
-      <button class="close-btn" on:click={taskDetailStore.hide} title="Cerrar panel">
+      <button class="close-btn" on:click={taskDetailStore.hide} title={$_('process_detail.close_panel')}>
         <Icon name="x" size={28}/>
       </button>
     </header>
 
     <div class="tab-header-tasks">
       <button class:active={activeTab === 'form'} on:click={() => activeTab = 'form'}>
-        <Icon name="edit-3" size={16}/> Formulario de Tarea
+        <Icon name="edit-3" size={16}/> {$_('task_detail.task_form_tab')}
       </button>
       <button class:active={activeTab === 'details'} on:click={() => activeTab = 'details'}>
-        <Icon name="file-search" size={16}/> Detalles del Proceso
+        <Icon name="file-search" size={16}/> {$_('task_detail.process_details_tab')}
       </button>
     </div>
 
     <div class="panel-content-full">
         {#if $taskDetailStore.loading}
-            <div class="state-placeholder"><Icon name="loader" size={32} spinning={true} /><p>Cargando detalles...</p></div>
+            <div class="state-placeholder"><Icon name="loader" size={32} spinning={true} /><p>{$_('process_detail.loading')}</p></div>
         {:else if $taskDetailStore.error}
-            <div class="state-placeholder error"><Icon name="alert-triangle" size={32} /><p>Error al cargar: {$taskDetailStore.error}</p></div>
+            <div class="state-placeholder error"><Icon name="alert-triangle" size={32} /><p>{$_('process_detail.error')}: {$taskDetailStore.error}</p></div>
         {:else if processInstance && formDefinition}
             {#if activeTab === 'form'}
                 <div class="form-content">
                     <!-- Columna Izquierda: Formulario Dinámico -->
                     <div class="dynamic-form">
-                        <h3><Icon name="file-text" size={18}/> Formulario</h3>
+                        <h3><Icon name="file-text" size={18}/> {$_('task_detail.form_title')}</h3>
                         {#each formDefinition.fields as field (field.name)}
                             <div class="form-field">
                                 <label for={field.name}>
@@ -181,7 +182,7 @@
                     <!-- Columna Derecha: Acciones y Contexto -->
                     <div class="action-form">
                         <section class="info-section">
-                            <h3><Icon name="info" size={16}/> Datos del Proceso</h3>
+                            <h3><Icon name="info" size={16}/> {$_('task_detail.process_data_title')}</h3>
                             <div class="form-placeholder-details">
                                 {#if processInstance.businessDataFields && processInstance.businessDataFields.length > 0}
                                     {#each processInstance.businessDataFields as field}
@@ -193,15 +194,15 @@
                                         </div>
                                     {/each}
                                 {:else}
-                                    <p class="no-data-placeholder">No hay datos de negocio para esta instancia.</p>
+                                    <p class="no-data-placeholder">{$_('process_detail.no_business_data')}</p>
                                 {/if}
                             </div>
                         </section>
 
                         <div class="action-section">
-                            <h3><Icon name="check-square" size={18}/> Finalizar Tarea</h3>
+                            <h3><Icon name="check-square" size={18}/> {$_('task_detail.complete_task_title')}</h3>
                             <div class="form-field">
-                              <label for="action-select">Selecciona una acción</label>
+                              <label for="action-select">{$_('task_detail.select_action_label')}</label>
                               <select id="action-select" bind:value={selectedAction}>
                                 {#each formDefinition.actions as action}
                                     <option value={action}>{action}</option>
@@ -209,17 +210,17 @@
                               </select>
                             </div>
                             <div class="form-field">
-                              <label for="comments-textarea">Añadir observaciones (opcional)</label>
-                              <textarea id="comments-textarea" rows="4" placeholder="Escribe tus comentarios aquí..." bind:value={comments}></textarea>
+                              <label for="comments-textarea">{$_('task_detail.comments_label')}</label>
+                              <textarea id="comments-textarea" rows="4" placeholder={$_('task_detail.comments_placeholder')} bind:value={comments}></textarea>
                             </div>
                             <div class="form-actions">
-                              <button class="cancel-btn" on:click={taskDetailStore.hide}>Cancelar</button>
+                              <button class="cancel-btn" on:click={taskDetailStore.hide}>{$_('task_detail.cancel_button')}</button>
                               <button class="submit-btn" on:click={confirmAndSubmit} disabled={isSubmitting}>
                                 {#if isSubmitting}
                                     <Icon name="loader" size={16} spinning={true} />
-                                    <span>Procesando...</span>
+                                    <span>{$_('task_detail.processing_button')}</span>
                                 {:else}
-                                    Finalizar Tarea
+                                    {$_('task_detail.complete_button')}
                                 {/if}
                                 </button>
                             </div>
@@ -230,7 +231,7 @@
                 <div class="process-details-content">
                     <div class="left-column">
                         <section class="info-section">
-                            <h3><Icon name="info" size={16}/> Información General</h3>
+                            <h3><Icon name="info" size={16}/> {$_('process_detail.general_info_title')}</h3>
                             <ul class="data-list">
                                 {#each generalInfo as item}
                                 <li>
@@ -245,9 +246,9 @@
                         </section>
                         <section class="info-section">
                             <div class="timeline-header">
-                                <h3><Icon name="git-commit" size={18}/> Trazabilidad</h3>
+                                <h3><Icon name="git-commit" size={18}/> {$_('process_detail.traceability_title')}</h3>
                                 {#if timeline.length > 0}
-                                <span class="progress-indicator">Paso {currentStepNumber} de {totalSteps}</span>
+                                <span class="progress-indicator">{$_('process_detail.step_of', { values: { current: currentStepNumber, total: totalSteps } })}</span>
                                 {/if}
                             </div>
                             <div class="timeline">
@@ -264,7 +265,7 @@
                                     <div class="timeline-content">
                                     <p class="task-name">{step.taskName}</p>
                                     {#if step.status === 'COMPLETED'}
-                                        <span class="user-info">Completado por <strong>{step.user}</strong> el {step.date}</span>
+                                        <span class="user-info">{@html $_('process_detail.completed_by_on', { values: { user: step.user, date: step.date } })}</span>
                                     {/if}
                                     </div>
                                 </div>
@@ -275,7 +276,7 @@
                     <div class="right-column-details">
                         <div class="tab-content-details">
                             <section class="info-section">
-                                <h3><Icon name="file-text" size={16}/> Datos del Proceso</h3>
+                                <h3><Icon name="file-text" size={16}/> {$_('process_detail.request_details_tab')}</h3>
                                 <div class="form-placeholder-details">
                                     {#if processInstance.businessDataFields && processInstance.businessDataFields.length > 0}
                                         {#each processInstance.businessDataFields as field}
@@ -287,12 +288,12 @@
                                             </div>
                                         {/each}
                                     {:else}
-                                        <p class="no-data-placeholder">No hay datos de negocio para esta instancia.</p>
+                                        <p class="no-data-placeholder">{$_('process_detail.no_business_data')}</p>
                                     {/if}
                                 </div>
                             </section>
                             <section class="info-section">
-                                <h3><Icon name="message-square" size={16}/> Observaciones</h3>
+                                <h3><Icon name="message-square" size={16}/> {$_('process_detail.comments_tab')}</h3>
                                  <div class="comments-section">
                                     {#if commentsData.length > 0}
                                         {#each commentsData as comment}
@@ -308,18 +309,18 @@
                                             </div>
                                         {/each}
                                     {:else}
-                                        <p class="no-data-placeholder">No hay observaciones registradas.</p>
+                                        <p class="no-data-placeholder">{$_('process_detail.no_comments')}</p>
                                     {/if}
                                 </div>
                             </section>
                              <section class="info-section">
-                                <h3><Icon name="paperclip" size={16}/> Documentos</h3>
+                                <h3><Icon name="paperclip" size={16}/> {$_('process_detail.documents_tab')}</h3>
                                  <div class="documents-section">
                                     {#if documentsData.length > 0}
                                         {#each documentsData as docGroup}
                                         {/each}
                                     {:else}
-                                        <p class="no-data-placeholder">No hay documentos adjuntos.</p>
+                                        <p class="no-data-placeholder">{$_('task_detail.no_documents')}</p>
                                     {/if}
                                 </div>
                             </section>
@@ -478,7 +479,10 @@ button { cursor: pointer; font-weight: 500; padding: 0.75rem 1.5rem; border-radi
 .comment-content p { margin: 0; }
 .documents-section h4 { color: var(--text-primary); margin: 0 0 1rem 0; }
 .file-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; }
-.file-list li { display: flex; align-items: center; gap: 1rem; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); background-color: var(--bg-primary); }
+.file-list li {
+  display: flex; align-items: center; gap: 1rem; padding: 0.75rem;
+  border-radius: 8px; border: 1px solid var(--border-color); background-color: var(--bg-primary);
+}
 .file-icon { color: var(--text-secondary); }
 .file-info { flex-grow: 1; }
 .file-name { color: var(--accent-color); text-decoration: none; font-weight: 500; }

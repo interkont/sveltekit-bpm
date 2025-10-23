@@ -1,5 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
+  import { _ } from 'svelte-i18n';
+  import Icon from '$lib/components/Icon.svelte';
 
   export let processData: {
     name: string;
@@ -51,20 +53,20 @@
 
 <div class="properties-panel-content">
   <div class="form-group">
-    <label for="proc-name">Process Name</label>
+    <label for="proc-name">{$_('editor.process_name_label')}</label>
     <input 
       id="proc-name"
       type="text" 
       bind:value={processData.name}
       on:input={handleUpdate}
-      placeholder="e.g., Purchase Request"
+      placeholder={$_('editor.process_name_placeholder')}
       {disabled}
       required
     />
   </div>
 
   <div class="form-group">
-    <label for="proc-key">Business Process Key</label>
+    <label for="proc-key">{$_('editor.process_key_label')}</label>
     <input 
       id="proc-key"
       type="text" 
@@ -72,40 +74,40 @@
       on:input={handleUpdate}
       readonly={!isNewProcess || disabled}
       class:readonly-input={!isNewProcess || disabled}
-      placeholder="e.g., PURCHASE_REQUEST"
+      placeholder={$_('editor.process_key_placeholder')}
       {disabled}
       required
     />
-    <small>Unique identifier. Cannot be changed after creation.</small>
+    <small>{$_('editor.process_key_helper')}</small>
   </div>
 
   <div class="form-group">
-    <label for="proc-desc">Description</label>
+    <label for="proc-desc">{$_('editor.description_label')}</label>
     <textarea 
       id="proc-desc"
       bind:value={processData.description}
       on:input={handleUpdate}
       rows="4"
-      placeholder="A brief summary of what this process does."
+      placeholder={$_('editor.description_placeholder')}
       {disabled}
       required
     />
   </div>
 
   <div class="form-group">
-    <label for="proc-category">Category</label>
+    <label for="proc-category">{$_('editor.category_label')}</label>
     <input 
       id="proc-category"
       type="text" 
       bind:value={processData.category}
       on:input={handleUpdate}
-      placeholder="e.g., Finance"
+      placeholder={$_('editor.category_placeholder')}
       {disabled}
     />
   </div>
 
   <div class="form-group">
-    <label for="proc-status">Status</label>
+    <label for="proc-status">{$_('editor.status_label')}</label>
     <select 
       id="proc-status"
       bind:value={processData.status}
@@ -122,7 +124,8 @@
 
   {#if !disabled && !isNewProcess}
     <button class="save-metadata-btn" on:click={handleSaveMetadata} disabled={!isValid}>
-      Actualizar Propiedades
+      <Icon name="save" size={16} />
+      {$_('editor.update_properties_button')}
     </button>
   {/if}
 </div>
@@ -163,6 +166,10 @@
     border-radius: 6px;
     font-weight: 500;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
   }
   .save-metadata-btn:hover { background-color: #059669; }
   .save-metadata-btn:disabled { background-color: #9ca3af; cursor: not-allowed; }

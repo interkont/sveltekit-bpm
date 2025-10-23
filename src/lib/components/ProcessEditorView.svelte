@@ -205,17 +205,17 @@
     if (!processId) return;
 
     modal.show({
-      title: 'Confirmar Eliminación',
-      message: `¿Está seguro de que desea eliminar el proceso "${get(processDefinition).name}"? Esta acción no se puede deshacer.`,
+      title: $_('editor.delete_confirm_title'),
+      message: $_('editor.delete_confirm_message', { values: { name: get(processDefinition).name } }),
       onConfirm: async () => {
         isSaving.set(true);
         try {
           await processDefinitionService.deleteProcess(processId!);
-          toast.show('Proceso eliminado con éxito.');
+          toast.show($_('editor.delete_success'));
           window.location.hash = 'process-models';
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-          toast.show(`Error al eliminar: ${errorMessage}`, 'error');
+          toast.show(`${$_('editor.delete_error')}: ${errorMessage}`, 'error');
         } finally {
           isSaving.set(false);
         }
@@ -227,14 +227,14 @@
     if (!processId) return;
 
     modal.show({
-        title: 'Confirmar Actualización',
-        message: '¿Desea guardar solo los cambios en los metadatos (nombre, descripción, etc.)?',
+        title: $_('editor.update_metadata_confirm_title'),
+        message: $_('editor.update_metadata_confirm_message'),
         onConfirm: async () => {
             isSaving.set(true);
             try {
                 const metadata = get(processDefinition);
                 await processDefinitionService.patchProcessMetadata(processId!, metadata);
-                toast.show('Detalles del proceso actualizados con éxito.');
+                toast.show($_('editor.update_metadata_success'));
             } catch (error) {
                 // The global API service already shows a toast on error
             } finally {
@@ -374,31 +374,33 @@
 <svelte:window on:keydown={handleKeyDown} />
 
 <div class="page-container">
-  <header class="action-bar">
+  <header class="action-bar view-header">
     <div class="title-cluster">
-      <a href="/#process-models" class="back-link" title="Volver a la lista">
+      <a href="/#process-models" class="back-link" title={$_('editor.back_to_list')}>
         <Icon name="chevron-left" />
       </a>
-      <h1>
-          {#if $mode === 'create'}
-              Nuevo Modelo de Proceso
-          {:else if $mode === 'view'}
-              Visualizando: {$processDefinition.name}
-          {:else}
-              Editando: {$processDefinition.name}
-          {/if}
-      </h1>
+      <div class="header-content">
+        <h1 class="header-title">
+            {#if $mode === 'create'}
+              {$_('editor.new_process_model_title')}
+            {:else if $mode === 'view'}
+              {$_('editor.viewing_title')}: {$processDefinition.name}
+            {:else}
+              {$_('editor.editing_title')}: {$processDefinition.name}
+            {/if}
+        </h1>
+      </div>
     </div>
     <div class="action-buttons">
         {#if $mode === 'view' && processId}
-            <button class="edit-btn" on:click={() => mode.set('edit')}>Editar</button>
+            <button class="edit-btn" on:click={() => mode.set('edit')}>{$_('editor.edit_button')}</button>
         {/if}
         {#if $mode === 'edit' || $mode === 'create'}
             {#if processId}
-              <button class="delete-btn" on:click={handleDelete} disabled={$isSaving}>Eliminar</button>
+              <button class="delete-btn" on:click={handleDelete} disabled={$isSaving}>{$_('editor.delete_button')}</button>
             {/if}
             <button class="save-btn" on:click={handleSave} disabled={$isSaving || !$isProcessPropertiesValid}>
-                {$isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                {$isSaving ? $_('editor.saving_button') : $_('editor.save_changes_button')}
             </button>
         {/if}
     </div>
@@ -410,7 +412,7 @@
 
   <main class="canvas-container" class:full-width={$mode === 'view'}>
     {#if $isLoading}
-        <div class="ssr-placeholder">Cargando Modelo...</div>
+        <div class="ssr-placeholder">{$_('editor.loading_model')}</div>
     {:else if isBrowser}
       <SvelteFlow 
         bind:nodes={$nodes} 
@@ -436,13 +438,13 @@
         <Controls />
       </SvelteFlow>
     {:else}
-      <div class="ssr-placeholder">Cargando Modelador...</div>
+      <div class="ssr-placeholder">{$_('editor.loading_editor')}</div>
     {/if}
   </main>
 
   <aside class="properties-panel">
     {#if $selectedNode}
-      <h3 class="panel-title">Node Properties</h3>
+      <h3 class="panel-title">{$_('editor.node_properties_title')}</h3>
       {#if $selectedNode.type === 'userTask' || $selectedNode.type === 'startEvent'}
         <TaskPropertiesPanel node={$selectedNode} on:update={handleUpdateNode} disabled={$mode === 'view'} />
       {:else if $selectedNode.type === 'autoTask'}
@@ -452,13 +454,13 @@
       {:else if $selectedNode.type === 'endEvent'}
         <BasicPropertiesPanel node={$selectedNode} on:update={handleUpdateNode} disabled={$mode === 'view'} />
       {:else}
-        <p>This node type has no configurable properties.</p>
+        <p>{$_('editor.no_properties')}</p>
       {/if}
     {:else if $selectedEdge}
-      <h3 class="panel-title">Sequence Properties</h3>
+      <h3 class="panel-title">{$_('editor.sequence_properties_title')}</h3>
       <EdgePropertiesPanel edge={$selectedEdge} nodes={$nodes} on:update={handleUpdateEdge} disabled={$mode === 'view'} />
     {:else}
-      <h3 class="panel-title">Process Properties</h3>
+      <h3 class="panel-title">{$_('editor.process_properties_title')}</h3>
       <ProcessPropertiesPanel 
         processData={$processDefinition}
         isNewProcess={!processId}

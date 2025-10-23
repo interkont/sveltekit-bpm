@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import type { Node } from '@xyflow/svelte';
+  import { _ } from 'svelte-i18n';
 
   export let node: Node;
 
@@ -35,24 +36,24 @@
   </div>
 
   <div class="form-group">
-    <label for="gateway-label">Node Label</label>
+    <label for="gateway-label">{$_('editor.task_name_label')}</label>
     <input 
       id="gateway-label"
       type="text" 
       bind:value={label}
       on:blur={handleUpdate}
-      placeholder="e.g., Is approved?"
+      placeholder={$_('editor.gateway_label_placeholder')}
     />
   </div>
 
   <div class="form-group">
-    <label for="node-description">Description</label>
+    <label for="node-description">{$_('editor.description_label')}</label>
     <textarea 
       id="node-description"
       bind:value={description}
       on:blur={handleUpdate}
       rows="4"
-      placeholder="Add an optional description..."
+      placeholder={$_('editor.description_placeholder')}
     />
   </div>
 </div>

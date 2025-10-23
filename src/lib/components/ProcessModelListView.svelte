@@ -4,6 +4,7 @@
   import { processDefinitionService } from '$lib/services/processDefinitionService';
   import type { ProcessDefinition } from '$lib/types';
   import { toast } from '$lib/stores/toast';
+  import { _ } from 'svelte-i18n';
 
   let definitions: ProcessDefinition[] = [];
   let isLoading = true;
@@ -24,25 +25,32 @@
 </script>
 
 <div class="view-container">
-  <div class="view-header">
+  <header class="view-header">
     <div>
-      <h2>Modelado de Procesos</h2>
-      <p>Define, visualiza y gestiona las plantillas de tus procesos de negocio.</p>
+      <h1 class="header-title">{$_('concepts.process_plural')}</h1>
+      <p class="header-description">{$_('process_model_list.description')}</p>
     </div>
     <a href="/#new-process-model" class="create-btn">
       <Icon name="plus" size={20}/>
-      Crear Nuevo Modelo
+      {$_('process_model_list.create_button')}
     </a>
-  </div>
+  </header>
 
   {#if isLoading}
-    <div class="loading-state">
-      <p>Cargando modelos de proceso...</p>
-    </div>
+    <div class="state-placeholder">
+        <Icon name="loader" size={24} spinning={true} />
+        <span>{$_('process_model_list.loading')}</span>
+      </div>
   {:else if error}
-    <div class="error-state">
-      <p>Error: {error}</p>
-    </div>
+    <div class="state-placeholder error">
+        <Icon name="alert-triangle" size={24} />
+        <span>{$_('process_model_list.error')}: {error}</span>
+      </div>
+  {:else if definitions.length === 0}
+      <div class="state-placeholder">
+        <Icon name="inbox" size={24} />
+        <span>{$_('process_model_list.empty')}</span>
+      </div>
   {:else}
     <div class="models-grid">
       {#each definitions as def (def.id)}
@@ -69,16 +77,18 @@
 </div>
 
 <style>
-  .view-container { display: flex; flex-direction: column; gap: 1.5rem; }
-  .view-header { display: flex; justify-content: space-between; align-items: center; }
-  .view-header h2 { margin: 0; }
-  .view-header p { margin: 0; color: var(--text-secondary); }
+  .view-container { 
+    display: flex; 
+    flex-direction: column;
+  }
+  
   .create-btn {
     display: flex; align-items: center; gap: 0.5rem;
     background-color: var(--accent-color); color: white;
     border: none; padding: 0.75rem 1.25rem; border-radius: 8px;
     font-weight: 500; cursor: pointer; transition: opacity 0.2s;
     text-decoration: none;
+    flex-shrink: 0;
   }
   .create-btn:hover { opacity: 0.9; }
 
@@ -97,8 +107,8 @@
     padding: 1.5rem;
     cursor: pointer;
     transition: all 0.2s ease-in-out;
-    text-decoration: none; /* Remove underline from link */
-    color: inherit; /* Inherit text color */
+    text-decoration: none;
+    color: inherit;
   }
   .model-card:hover {
     transform: translateY(-4px);
@@ -130,5 +140,13 @@
   .status-active { color: #16a34a; font-weight: 600; }
   .status-draft { color: #ca8a04; font-weight: 600; }
   .status-deprecated { color: #7f1d1d; font-weight: 600; }
-  .loading-state, .error-state { text-align: center; padding: 2rem; }
+  
+  .state-placeholder {
+    display: flex; align-items: center; justify-content: center;
+    flex-grow: 1; gap: 1rem; color: var(--text-secondary);
+    border: 2px dashed var(--border-color); border-radius: 12px;
+    min-height: 200px;
+    margin-top: 1.5rem;
+  }
+  .state-placeholder.error { color: #c53030; background-color: #f5656520; }
 </style>

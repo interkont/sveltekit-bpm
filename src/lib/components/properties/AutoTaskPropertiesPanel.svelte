@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import type { Node } from '@xyflow/svelte';
   import BasicPropertiesPanel from './BasicPropertiesPanel.svelte';
+  import { _ } from 'svelte-i18n';
 
   export let node: Node;
   export let disabled: boolean = false;
@@ -27,16 +28,16 @@
 
 <div class="properties-panel-content">
   <div class="form-group">
-    <label for="webhook-url">Webhook to Call</label>
+    <label for="webhook-url">{$_('editor.webhook_label')}</label>
     <input 
       id="webhook-url"
       type="url" 
       bind:value={webhook}
       on:blur={handleWebhookUpdate}
-      placeholder="https://your-automation-url.com/..."
+      placeholder={$_('editor.webhook_placeholder')}
       {disabled}
     />
-    <small>Enter the full URL of the webhook to be triggered.</small>
+    <small>{$_('editor.process_key_helper')}</small>
   </div>
 </div>
 

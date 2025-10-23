@@ -6,6 +6,7 @@
   import type { StartFormDefinition, ProcessDefinition } from '$lib/types';
   import { toast } from '$lib/stores/toast';
   import { modal } from '$lib/stores/modal';
+  import { _ } from 'svelte-i18n';
 
   export let processDefinition: ProcessDefinition;
 
@@ -19,6 +20,7 @@
   let error: string | null = null;
 
   onMount(async () => {
+    if (!processDefinition) return; // Prevent API call if prop is null
     try {
       formDefinition = await processDefinitionService.getStartForm(processDefinition.id);
       // Initialize businessData with null values for each field
@@ -26,7 +28,7 @@
         businessData[field.name] = null;
       });
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to load form definition.';
+      error = e instanceof Error ? e.message : $_('start_process_form.error_loading_form');
     } finally {
       isLoading = false;
     }
@@ -47,8 +49,8 @@
 
   function confirmAndSubmit() {
     modal.show({
-      title: 'Confirmar Inicio de Proceso',
-      message: `¿Estás seguro de que deseas iniciar el proceso "${processDefinition.name}" con los datos proporcionados?`,
+      title: $_('start_process_form.confirm_modal_title', { values: { concept: $_('concepts.instance_singular') } }),
+      message: $_('start_process_form.confirm_modal_message', { values: { concept: $_('concepts.process_singular'), name: processDefinition.name } }),
       onConfirm: handleSubmit,
     });
   }
@@ -66,10 +68,10 @@
       };
 
       const response = await processInstanceService.createInstance(payload);
-      toast.show(response.message || 'Proceso iniciado con éxito.', 'success');
+      toast.show(response.message || $_('start_process_form.success_toast', { values: { concept: $_('concepts.process_singular') } }), 'success');
       dispatch('navigate', { view: 'processes' }); // Navigate back to the list
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to start process.';
+      error = e instanceof Error ? e.message : $_('start_process_form.error_starting_process', { values: { concept: $_('concepts.process_singular') } });
       toast.show(error, 'error');
     } finally {
       isSubmitting = false;
@@ -81,30 +83,31 @@
   }
 </script>
 
+{#if processDefinition}
 <div class="view-container">
   <div class="view-header">
      <button class="back-btn" on:click={goBack}>
        <Icon name="chevron-left" />
-       Volver a la Selección
+       {$_('start_process_form.back_to_selection')}
      </button>
   </div>
 
   <div class="title">
-    <h2>Iniciar: {processDefinition.name}</h2>
+    <h2>{$_('start_process_form.title', { values: { name: processDefinition.name } })}</h2>
     <p>{processDefinition.description}</p>
   </div>
 
   <div class="form-container">
     {#if isLoading}
-      <div class="state-placeholder"><Icon name="loader" size={24} spinning={true} /> Cargando formulario...</div>
+      <div class="state-placeholder"><Icon name="loader" size={24} spinning={true} /> {$_('start_process_form.loading')}</div>
     {:else if error}
       <div class="state-placeholder error"><Icon name="alert-triangle" size={24} /> {error}</div>
     {:else if formDefinition}
       <form on:submit|preventDefault={confirmAndSubmit}>
         <!-- General description field -->
         <div class="form-field">
-          <label for="processDescription">Descripción Corta del Caso<span class="required-star">*</span></label>
-          <input type="text" id="processDescription" bind:value={description} required placeholder="Ej: Compra de licencias para equipo de marketing" />
+          <label for="processDescription">{$_('start_process_form.description_label')}<span class="required-star">*</span></label>
+          <input type="text" id="processDescription" bind:value={description} required placeholder={$_('start_process_form.description_placeholder')} />
         </div>
 
         <hr class="divider" />
@@ -134,14 +137,14 @@
         {/if}
 
         <div class="form-actions">
-          <button type="button" class="btn btn-secondary" on:click={goBack}>Cancelar</button>
+          <button type="button" class="btn btn-secondary" on:click={goBack}>{$_('start_process_form.cancel_button')}</button>
           <button type="submit" class="btn btn-primary" disabled={!isFormValid || isSubmitting}>
             {#if isSubmitting}
               <Icon name="loader" size={16} spinning={true}/>
-              <span>Iniciando...</span>
+              <span>{$_('start_process_form.submitting_button')}</span>
             {:else}
               <Icon name="plus-circle" size={16}/>
-              <span>Iniciar Proceso</span>
+              <span>{$_('start_process_form.submit_button')}</span>
             {/if}
           </button>
         </div>
@@ -149,11 +152,12 @@
     {/if}
   </div>
 </div>
+{/if}
 
 <style>
   .view-container { display: flex; flex-direction: column; gap: 1.5rem; }
   .view-header { display: flex; }
-  .title h2 { margin: 0; color: var(--text-primary); }
+  .title h2 { margin: 0; color: var(--text-primary);font-size: 1.7rem; padding: 5px 0px; font-weight: 600; }
   .title p { margin: 0; color: var(--text-secondary); }
 
   .back-btn { display: flex; align-items: center; gap: 0.5rem; background: none; border: none; font-size: 1rem; color: var(--text-secondary); cursor: pointer; font-weight: 500; }

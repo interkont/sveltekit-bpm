@@ -307,3 +307,20 @@ Se ha implementado una validación en tiempo real en el panel de propiedades del
 - **Solución Técnica al Desafío de Reactividad:**
   - **Problema:** Se encontró un desafío en el que la reactividad de Svelte (`$:`) no actualizaba el estado del botón local "Actualizar Propiedades" de manera consistente.
   - **Resolución:** La solución final fue abandonar las declaraciones reactivas (`$:`) para el control del botón y, en su lugar, asignar el estado de validez **imperativamente** a una variable local (`isValid`) dentro del manejador de eventos `handleUpdate`, que se ejecuta con cada pulsación de tecla. Esto garantiza que Svelte detecte el cambio y actualice la interfaz de usuario de forma fiable.
+---
+
+## 14. Avance en Internacionalización y Unificación Conceptual
+
+Se ha continuado con la implementación de la internacionalización (i18n), aplicando las traducciones a la vista de creación de nuevas instancias y, al mismo tiempo, realizando un ajuste conceptual clave para unificar el lenguaje en toda la aplicación.
+
+- **Componente Afectado:** `src/lib/components/NewProcessView.svelte`
+
+- **Ajuste Conceptual:**
+  - Se redefinió el propósito del componente `NewProcessView` para reflejar que su función es crear **instancias (casos)** a partir de **procesos**, y no "nuevos procesos".
+  - Para estandarizar la terminología, se ha hecho un uso estratégico de la sección `concepts` en los archivos de idioma, que contiene las formas singular y plural de entidades clave como "Proceso", "Caso", "Tarea", etc.
+
+- **Implementación de i18n:**
+  1.  **Nuevas Traducciones:** Se creó una nueva sección `new_instance` en `en.json` y `es.json` para albergar los textos específicos de esta vista.
+  2.  **Composición de Textos:** Se ha implementado una composición dinámica de textos para mejorar la reutilización y consistencia. Por ejemplo, el título se construye combinando `new_instance.title_prefix` y `concepts.instance_singular` para generar "Crear Nuevo Caso" o "Create New Case".
+  3.  **Sintaxis Correcta:** Se ha aplicado la sintaxis correcta `{$_('clave.de.traduccion')}` para acceder a las traducciones desde el store de `svelte-i18n`.
+  4.  **Actualización del Componente:** Todos los textos estáticos en `NewProcessView.svelte` han sido reemplazados por sus respectivas claves de i18n, haciendo que el componente sea completamente multilingüe y conceptualmente coherente con el resto de la aplicación.

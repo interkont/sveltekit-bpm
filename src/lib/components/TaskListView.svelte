@@ -4,6 +4,7 @@
   import { taskDetailStore } from '$lib/stores/taskDetailStore';
   import { taskListStore } from '$lib/stores/taskListStore';
   import type { Task } from '$lib/types';
+  import { _ } from 'svelte-i18n';
 
   onMount(() => {
     // Fetch tasks when the component is first mounted
@@ -12,32 +13,32 @@
 </script>
 
 <div class="view-container">
-  <div class="view-header">
+  <header class="view-header">
     <div>
-      <h2>Mis Tareas Pendientes</h2>
-      <p>Aquí encontrarás todas las tareas que requieren tu atención.</p>
+      <h1 class="header-title">{$_('concepts.task_plural')}</h1>
+      <p class="header-description">{$_('task_list.description')}</p>
     </div>
     <button class="btn btn-secondary" on:click={taskListStore.fetchTasks} disabled={$taskListStore.loading}>
       <Icon name="loader" size={16} spinning={$taskListStore.loading} />
-      <span>Refrescar</span>
+      <span>{$_('task_list.refresh_button')}</span>
     </button>
-  </div>
+  </header>
   
   <div class="task-list-container">
     {#if $taskListStore.loading}
       <div class="state-placeholder">
         <Icon name="loader" size={24} spinning={true} />
-        <span>Cargando tareas...</span>
+        <span>{$_('task_list.loading')}</span>
       </div>
     {:else if $taskListStore.error}
       <div class="state-placeholder error">
         <Icon name="alert-triangle" size={24} />
-        <span>Error al cargar tareas: {$taskListStore.error}</span>
+        <span>{$_('task_list.error')}: {$taskListStore.error}</span>
       </div>
     {:else if $taskListStore.tasks.length === 0}
       <div class="state-placeholder">
         <Icon name="check-circle" size={24} />
-        <span>¡Excelente! No tienes tareas pendientes.</span>
+        <span>{$_('task_list.empty')}</span>
       </div>
     {:else}
       <div class="task-list">
@@ -51,16 +52,16 @@
                     <h3>{task.taskName}</h3>
                     <p class="process-description">{task.processDescription}</p>
                     <p class="process-meta">
-                        <strong>Proceso:</strong> {task.processName} (V{task.processVersion}) - 
-                        <strong>Instancia ID:</strong> {task.processInstanceId} - 
-                        Iniciado por: {task.processStartedBy}
+                        <strong>{$_('task_list.process_label')}:</strong> {task.processName} (V{task.processVersion}) - 
+                        <strong>{$_('task_list.instance_id_label')}:</strong> {task.processInstanceId} - 
+                        {$_('task_list.started_by_label')}: {task.processStartedBy}
                     </p>
                 </div>
             </div>
             <div class="task-actions">
               <button class="manage-btn" on:click={() => taskDetailStore.show(task)}>
                 <Icon name="arrow-right-circle" size={16}/>
-                Gestionar Tarea
+                {$_('task_list.manage_task_button')}
               </button>
             </div>
           </div>
@@ -71,13 +72,13 @@
 </div>
 
 <style>
-/* ... (Existing styles remain largely the same, with additions for new states) ... */
-.view-container { display: flex; flex-direction: column; gap: 1.5rem; }
-.view-header { display: flex; justify-content: space-between; align-items: center; }
-.view-header h2 { margin: 0; } .view-header p { margin: 0; color: var(--text-secondary); }
+.view-container { 
+  display: flex; 
+  flex-direction: column; 
+}
 
 .task-list-container {
-  min-height: 300px; /* Ensure container has a minimum height */
+  min-height: 300px;
   display: flex;
   flex-direction: column;
 }

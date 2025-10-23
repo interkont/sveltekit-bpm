@@ -29,16 +29,16 @@
 </script>
 
 <div class="view-container">
-  <div class="view-header">
+  <header class="view-header">
     <div>
-      <h2>{$_('process_list.title')}</h2>
-      <p>{$_('process_list.description')}</p>
+      <h1 class="header-title">{$_('concepts.instance_plural')}</h1>
+      <p class="header-description">{$_('process_list.description')}</p>
     </div>
     <button class="create-btn" on:click={() => dispatch('navigate', { view: 'new-process' })}>
       <Icon name="plus" size={20}/>
       {$_('process_list.create_button')}
     </button>
-  </div>
+  </header>
 
   <div class="tabs">
     <button class:active={activeTab === 'running'} on:click={() => setTab('running')}>
@@ -93,15 +93,17 @@
 </div>
 
 <style>
-/* ... Estilos existentes ... */
-.view-container { display: flex; flex-direction: column; gap: 1.5rem; }
-.view-header { display: flex; justify-content: space-between; align-items: center; }
-.view-header h2 { margin: 0; } .view-header p { margin: 0; color: var(--text-secondary); }
+.view-container { 
+  display: flex; 
+  flex-direction: column; 
+}
+
 .create-btn {
   display: flex; align-items: center; gap: 0.5rem;
   background-color: var(--accent-color); color: white;
   border: none; padding: 0.75rem 1.25rem; border-radius: 8px;
   font-weight: 500; cursor: pointer; transition: opacity 0.2s;
+  flex-shrink: 0;
 }
 .create-btn:hover { opacity: 0.9; }
 
@@ -113,7 +115,7 @@
 }
 .tabs button.active { color: var(--accent-color); border-color: var(--accent-color); }
 
-.process-list-container { min-height: 300px; display: flex; flex-direction: column; }
+.process-list-container { min-height: 300px; display: flex; flex-direction: column; margin-top: 1.5rem; }
 .state-placeholder {
   display: flex; align-items: center; justify-content: center;
   flex-grow: 1; gap: 1rem; color: var(--text-secondary);

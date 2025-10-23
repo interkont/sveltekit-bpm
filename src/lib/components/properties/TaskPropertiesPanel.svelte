@@ -1,10 +1,9 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  // --- FIX: Import our custom AppNode type ---
+  import { _ } from 'svelte-i18n';
   import type { Node } from '@xyflow/svelte';
   import { processRoleStore } from '$lib/stores/processRoleStore';
   
-  // --- FIX: Use the specific AppNode type for the node prop ---
   export let node: Node;
   export let disabled: boolean = false;
 
@@ -12,7 +11,6 @@
 
   let label = node.data.label || '';
   let description = node.data.description || '';
-  // The type error is now gone because TypeScript knows 'assignedRoleId' exists and is a number or null.
   let assignedRoleId: number | null | '' = node.data.assignedRoleId ?? null;
 
   function handleUpdate() {
@@ -51,7 +49,7 @@
   </div>
 
   <div class="form-group">
-    <label for="task-label">Node Label</label>
+    <label for="task-label">{$_('editor.task_name_label')}</label>
     <input 
       id="task-label"
       type="text" 
@@ -62,13 +60,13 @@
   </div>
 
   <div class="form-group">
-    <label for="node-description">Description</label>
+    <label for="node-description">{$_('editor.description_label')}</label>
     <textarea 
       id="node-description"
       bind:value={description}
       on:blur={handleUpdate}
       rows="4"
-      placeholder="Add an optional description..."
+      placeholder={$_('editor.description_placeholder')}
       {disabled}
     />
   </div>
@@ -78,12 +76,12 @@
   <!-- Task-Specific Properties -->
   <div class="form-group">
     <label for="assigned-role">
-      Assigned Role
+      {$_('editor.role_assignment_label')}
       {#if node.type === 'startEvent'}(Optional){/if}
     </label>
     
     {#if $processRoleStore.loading}
-      <div class="loading-placeholder">Loading roles...</div>
+      <div class="loading-placeholder">{$_('process_model_list.loading')}</div>
     {:else}
       <select 
         id="assigned-role"
@@ -92,7 +90,7 @@
         class:error={node.type === 'userTask' && !assignedRoleId}
         {disabled}
       >
-        <option value="">-- Select a role --</option>
+        <option value="">-- {$_('editor.no_role_assigned')} --</option>
         {#each $processRoleStore.roles as role (role.id)}
           <option value={role.id}>{role.name}</option>
         {/each}
