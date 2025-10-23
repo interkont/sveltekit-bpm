@@ -324,3 +324,19 @@ Se ha continuado con la implementación de la internacionalización (i18n), apli
   2.  **Composición de Textos:** Se ha implementado una composición dinámica de textos para mejorar la reutilización y consistencia. Por ejemplo, el título se construye combinando `new_instance.title_prefix` y `concepts.instance_singular` para generar "Crear Nuevo Caso" o "Create New Case".
   3.  **Sintaxis Correcta:** Se ha aplicado la sintaxis correcta `{$_('clave.de.traduccion')}` para acceder a las traducciones desde el store de `svelte-i18n`.
   4.  **Actualización del Componente:** Todos los textos estáticos en `NewProcessView.svelte` han sido reemplazados por sus respectivas claves de i18n, haciendo que el componente sea completamente multilingüe y conceptualmente coherente con el resto de la aplicación.
+
+## 15. Avances en Internacionalización (i18n) y estabilidad de formularios
+  Se ha continuado de manera exhaustiva con la internacionalización de la aplicación, enfocándose en la reutilización de claves de idioma y la aplicación consistente de la terminología unificada a través de concepts.
+
+  Estrategia de Reutilización:
+
+  Se consolidó la práctica de complementar secciones de idioma existentes. Específicamente, todos los textos para los componentes de gestión de roles (RoleManagementContent.svelte y RoleEditPanel.svelte) se integraron dentro de la sección user_management, aprovechando su contexto compartido y evitando la duplicación.
+  Componentes Adicionales Internacionalizados:
+
+  StartProcessFormView.svelte: Se tradujo por completo el formulario para iniciar nuevas instancias de proceso.
+  UserEditPanel.svelte: Se completó la internacionalización del panel de edición de usuarios.
+  RoleManagementContent.svelte y RoleEditPanel.svelte: Se tradujeron las vistas y paneles para la gestión de roles.
+  Solución de Bug Crítico de Reactividad en Formularios:
+
+  Problema: Se detectó y diagnosticó un error de comportamiento en UserEditPanel.svelte donde el uso de la tienda {$_} dentro de las etiquetas <option> de un <select> con bind:value provocaba fallos en la renderización y funcionalidad del formulario.
+  Solución Implementada: Se aplicó el patrón recomendado por Svelte para manejar opciones dinámicas. Se creó un array reactivo en el bloque <script> que contiene los objetos de las opciones (con value y label traducido). El <select> en el HTML fue modificado para iterar sobre este array con un bloque #each. Esta solución desacopla la reactividad de svelte-i18n del mecanismo de bind:value de Svelte, garantizando un comportamiento estable y predecible del formulario en todos los idiomas.

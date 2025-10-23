@@ -7,6 +7,7 @@
   import { createEventDispatcher } from 'svelte';
   import { modal } from '$lib/stores/modal';
   import { toast } from '$lib/stores/toast';
+  import { _ } from 'svelte-i18n';
 
   const dispatch = createEventDispatcher();
 
@@ -36,14 +37,14 @@
 
   function handleDeleteRole(role: ProcessRole) {
     modal.show({
-      title: 'Eliminar Rol',
-      message: `¿Estás seguro de que deseas eliminar el rol "${role.name}"?`,
+      title: $_('user_management.delete_role_confirm_title'),
+      message: $_('user_management.delete_role_confirm_message', { values: { name: role.name } }),
       onConfirm: async () => {
         try {
           await processRoleStore.deleteRole(role.id);
-          toast.show('Rol eliminado con éxito.', 'success');
+          toast.show($_('user_management.delete_role_success'), 'success');
         } catch (error) {
-          const message = error instanceof Error ? error.message : "An unexpected error occurred.";
+          const message = error instanceof Error ? error.message : $_('user_management.unexpected_error');
           toast.show(message, 'error');
         }
       },
@@ -60,7 +61,7 @@
       <input
         type="text"
         class="search-input"
-        placeholder="Buscar por nombre o descripción..."
+        placeholder={$_('user_management.role_search_placeholder')}
         bind:value={searchTerm}
       />
     </div>
@@ -70,10 +71,10 @@
     <table class="data-table">
       <thead class="table-header">
         <tr>
-          <th>Rol</th>
-          <th>Cantidad</th>
-          <th>Miembros</th>
-          <th class="text-center">Acciones</th>
+          <th>{$_('user_management.role_header')}</th>
+          <th>{$_('user_management.quantity_header')}</th>
+          <th>{$_('user_management.members_header')}</th>
+          <th class="text-center">{$_('user_management.actions_header')}</th>
         </tr>
       </thead>
       <tbody class="table-body">
@@ -81,7 +82,7 @@
           <tr class="table-row">
             <td class="cell-primary">
               <div class="list-name">{role.name}</div>
-              <div class="text-secondary">{role.description || 'Sin descripción'}</div>
+              <div class="text-secondary">{role.description || $_('user_management.no_description')}</div>
             </td>
             <td>
               <div class="member-count">
@@ -112,10 +113,10 @@
             </td>
             <td class="text-center">
                <div class="flex items-center justify-center gap-2">
-                <button class="btn-icon" on:click={() => handleEditRole(role)} title="Editar rol">
+                <button class="btn-icon" on:click={() => handleEditRole(role)} title={$_('user_management.edit_role_tooltip')}>
                   <Icon name="edit" />
                 </button>
-                <button class="btn-icon btn-icon-danger" on:click={() => handleDeleteRole(role)} title="Eliminar rol">
+                <button class="btn-icon btn-icon-danger" on:click={() => handleDeleteRole(role)} title={$_('user_management.delete_role_tooltip')}>
                   <Icon name="x" />
                 </button>
               </div>

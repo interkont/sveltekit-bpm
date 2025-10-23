@@ -8,6 +8,7 @@
   import { processRoleStore } from '$lib/stores/processRoleStore';
   import { userStore } from '$lib/stores/userStore';
   import { toast } from '$lib/stores/toast';
+  import { _ } from 'svelte-i18n';
 
   export let role: ProcessRole | {} = {};
 
@@ -21,9 +22,9 @@
   let selectedMemberIds = new Set<number>();
 
   $: {
-    title = 'id' in role && role.id ? 'Editar Rol' : 'Agregar Nuevo Rol';
-    saveButtonText = 'id' in role && role.id ? 'Guardar Cambios' : 'Crear Rol';
     isNewRole = !('id' in role && role.id);
+    title = isNewRole ? $_('user_management.add_title', { values: { concept: $_('concepts.role_singular') } }) : $_('user_management.edit_title', { values: { concept: $_('concepts.role_singular') } });
+    saveButtonText = isNewRole ? $_('user_management.create_role_button') : $_('user_management.save_button');
     
     if ('id' in role && role.id) {
       processRoleService.getRoleById(role.id).then(detailedRole => {
@@ -58,7 +59,7 @@
 
   async function handleSave() {
     if (!roleData.name) {
-      toast.show('El nombre del rol es obligatorio.', 'error');
+      toast.show($_('user_management.validation_role_name_error'), 'error');
       return;
     }
 
@@ -68,18 +69,18 @@
           name: roleData.name,
           description: roleData.description || '',
         });
-        toast.show(`Rol "${roleData.name}" creado.`, 'success');
+        toast.show($_('user_management.create_role_success', { values: { name: roleData.name } }), 'success');
       } else {
         await processRoleStore.updateRole(roleData.id!, {
           name: roleData.name,
           description: roleData.description,
           userIds: Array.from(selectedMemberIds),
         });
-        toast.show(`Rol "${roleData.name}" actualizado.`, 'success');
+        toast.show($_('user_management.update_role_success', { values: { name: roleData.name } }), 'success');
       }
       closePanel();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Ocurrió un error inesperado';
+      const message = error instanceof Error ? error.message : $_('user_management.unexpected_error');
       toast.show(message, 'error');
     }
   }
@@ -100,19 +101,19 @@
     <div class="panel-body">
       <form on:submit|preventDefault={handleSave}>
         <div class="form-group">
-          <label for="roleName" class="form-label">Nombre del Rol</label>
+          <label for="roleName" class="form-label">{$_('user_management.role_name_label')}</label>
           <input type="text" id="roleName" class="form-input" bind:value={roleData.name} required />
         </div>
         <div class="form-group">
-          <label for="roleDescription" class="form-label">Descripción</label>
+          <label for="roleDescription" class="form-label">{$_('user_management.description_label')}</label>
           <textarea id="roleDescription" class="form-textarea" rows="3" bind:value={roleData.description}></textarea>
         </div>
         
         <div class="form-group">
-          <label class="form-label">Miembros</label>
+          <label class="form-label">{$_('user_management.members_label')}</label>
           <div class="member-management">
             <div class="search-container-local">
-              <input type="text" class="form-input" placeholder="Buscar usuarios..." bind:value={memberSearchTerm} />
+              <input type="text" class="form-input" placeholder={$_('user_management.search_users_placeholder')} bind:value={memberSearchTerm} />
               <Icon name="search" size={18} class="search-icon-local" />
             </div>
 
@@ -132,7 +133,7 @@
                   </label>
                 </div>
               {:else}
-                <div class="empty-list-placeholder">No se encontraron usuarios.</div>
+                <div class="empty-list-placeholder">{$_('user_management.no_users_found')}</div>
               {/each}
             </div>
           </div>
@@ -141,7 +142,7 @@
     </div>
 
     <footer class="panel-footer">
-      <button type="button" class="btn btn-secondary" on:click={closePanel}>Cancelar</button>
+      <button type="button" class="btn btn-secondary" on:click={closePanel}>{$_('user_management.cancel_button')}</button>
       <button type="submit" class="btn btn-primary" on:click={handleSave}>{saveButtonText}</button>
     </footer>
   </div>
