@@ -5,8 +5,24 @@
   import { modal } from '$lib/stores/modal';
   import { authService } from '$lib/services/authService';
   import { _ } from 'svelte-i18n';
+  import { authStore } from '$lib/stores/authStore';
 
   $: activeItem = $page.url.hash.substring(1) || 'dashboard';
+  $: userModules = $authStore.user?.modules || [];
+
+  const moduleMap = {
+    dashboard: 'DASH',
+    tasks: 'TASK',
+    processes: 'INST',
+    'process-models': 'PROC',
+    users: 'ORG'
+  };
+
+  function hasAccess(moduleKey: keyof typeof moduleMap): boolean {
+    if (!$authStore.user) return false;
+    const requiredModule = moduleMap[moduleKey];
+    return userModules.includes(requiredModule);
+  }
 
   function navigate(view: string) {
     window.location.hash = view;
@@ -29,26 +45,36 @@
     <span class="logo-text">Flowify</span>
   </div>
   <nav>
-    <button class:active={activeItem === 'dashboard'} on:click={() => navigate('dashboard')}>
-      <Icon name="layout-dashboard" size={24}/>
-      <span class="nav-text">{$_('sidebar.dashboard')}</span>
-    </button>
-    <button class:active={activeItem === 'tasks'} on:click={() => navigate('tasks')}>
-      <Icon name="check-square" size={24}/>
-      <span class="nav-text">{$_('sidebar.tasks')}</span>
-    </button>
-    <button class:active={activeItem === 'processes'} on:click={() => navigate('processes')}>
-      <Icon name="git-branch" size={24}/>
-      <span class="nav-text">{$_('sidebar.cases')}</span>
-    </button>
-    <button class:active={activeItem === 'process-models'} on:click={() => navigate('process-models')}>
-      <Icon name="network" size={24}/>
-      <span class="nav-text">{$_('sidebar.processes')}</span>
-    </button>
-    <button class:active={activeItem === 'users'} on:click={() => navigate('users')}>
-      <Icon name="users" size={24}/>
-      <span class="nav-text">{$_('sidebar.teams')}</span>
-    </button>
+    {#if hasAccess('dashboard')}
+      <button class:active={activeItem === 'dashboard'} on:click={() => navigate('dashboard')}>
+        <Icon name="layout-dashboard" size={24}/>
+        <span class="nav-text">{$_('sidebar.dashboard')}</span>
+      </button>
+    {/if}
+    {#if hasAccess('tasks')}
+      <button class:active={activeItem === 'tasks'} on:click={() => navigate('tasks')}>
+        <Icon name="check-square" size={24}/>
+        <span class="nav-text">{$_('sidebar.tasks')}</span>
+      </button>
+    {/if}
+    {#if hasAccess('processes')}
+      <button class:active={activeItem === 'processes'} on:click={() => navigate('processes')}>
+        <Icon name="git-branch" size={24}/>
+        <span class="nav-text">{$_('sidebar.cases')}</span>
+      </button>
+    {/if}
+    {#if hasAccess('process-models')}
+      <button class:active={activeItem === 'process-models'} on:click={() => navigate('process-models')}>
+        <Icon name="network" size={24}/>
+        <span class="nav-text">{$_('sidebar.processes')}</span>
+      </button>
+    {/if}
+    {#if hasAccess('users')}
+      <button class:active={activeItem === 'users'} on:click={() => navigate('users')}>
+        <Icon name="users" size={24}/>
+        <span class="nav-text">{$_('sidebar.teams')}</span>
+      </button>
+    {/if}
   </nav>
 
   <div class="sidebar-footer">

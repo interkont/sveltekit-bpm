@@ -12,6 +12,7 @@ interface LoginCredentials {
 interface LoginResponse {
   user: User;
   token: string;
+  modules: string[];
 }
 
 // Interface for the profile update payload
@@ -38,14 +39,18 @@ class AuthService {
         // --- DATA TRANSFORMATION ---
         // To minimize impact on existing components, we transform the incoming `roles` array
         // into the `processRoles` array of strings that components expect.
+        // We also inject the `modules` array into the user object.
         const userForStore: User = {
           ...response.user,
-          processRoles: response.user.roles.map(role => role.name)
+          processRoles: response.user.roles.map(role => role.name),
+          modules: response.modules // Inject modules here
         };
 
         setAuthToken(response.token);
         authStore.set({ user: userForStore, token: response.token });
         
+        // This localStorage part is now handled by the authStore itself,
+        // but we'll leave it for now to avoid breaking changes if logic depends on it.
         if (typeof window !== 'undefined') {
           localStorage.setItem('authToken', response.token);
           localStorage.setItem('user', JSON.stringify(userForStore));

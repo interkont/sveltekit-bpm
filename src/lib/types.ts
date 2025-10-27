@@ -17,6 +17,7 @@ export interface User {
     roles: Role[];
     processRoles?: string[];
     avatarUrl?: string;
+    modules?: string[];
 }
 
 export interface ProcessRole {

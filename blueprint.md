@@ -340,3 +340,21 @@ Se ha continuado con la implementación de la internacionalización (i18n), apli
 
   Problema: Se detectó y diagnosticó un error de comportamiento en UserEditPanel.svelte donde el uso de la tienda {$_} dentro de las etiquetas <option> de un <select> con bind:value provocaba fallos en la renderización y funcionalidad del formulario.
   Solución Implementada: Se aplicó el patrón recomendado por Svelte para manejar opciones dinámicas. Se creó un array reactivo en el bloque <script> que contiene los objetos de las opciones (con value y label traducido). El <select> en el HTML fue modificado para iterar sobre este array con un bloque #each. Esta solución desacopla la reactividad de svelte-i18n del mecanismo de bind:value de Svelte, garantizando un comportamiento estable y predecible del formulario en todos los idiomas.
+
+# 16. Visibilidad de Módulos Dinámica y Controlada por Backend
+  Se ha implementado una mejora de arquitectura para que la visibilidad de los módulos en la barra de navegación lateral (Sidebar) sea controlada dinámicamente por los permisos definidos en el backend, en lugar de ser estática.
+
+  Respuesta de API Modificada:
+  Se adaptó el frontend para procesar la nueva respuesta del endpoint /auth/login, que ahora incluye un array modules al mismo nivel que user y token. Este array contiene los códigos de los módulos a los que el usuario autenticado tiene acceso (ej. ["DASH", "TASK", "ORG"]).
+
+  Adaptación del Flujo de Autenticación:
+  Tipo User Actualizado: La interfaz User en src/lib/types.ts fue extendida para incluir la propiedad opcional modules: string[].
+  Lógica en authService: Se modificó authService.ts para que, tras un login exitoso, combine la información del user y el array modules en un único objeto de usuario antes de pasarlo al authStore.
+  Persistencia de Sesión: Se robusteció el authStore.ts para asegurar que el objeto de usuario completo, incluyendo los modules, sea guardado y recuperado de localStorage, manteniendo la visibilidad de los módulos de forma persistente.
+
+  Componente Sidebar Dinámico:
+  El componente Sidebar.svelte ahora lee los modules del usuario desde el authStore.
+  Cada elemento de la navegación está envuelto en una lógica condicional ({#if}). El elemento solo se renderiza si el código de módulo correspondiente está presente en la lista de permisos del usuario.
+
+  Nota de Implementación:
+  Se identificó y solucionó un caso inicial donde, después de la implementación, el Sidebar aparecía vacío. La causa era la persistencia de un objeto de usuario "antiguo" (sin modules) en localStorage. La solución consiste en cerrar y volver a iniciar sesión una vez para actualizar la estructura de datos en el navegador.
