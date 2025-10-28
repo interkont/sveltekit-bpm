@@ -12,6 +12,7 @@
   export let node: Node;
   export let disabled: boolean = false;
   export let formFields: FormFieldPayload[] = [];
+  export let actions: string[] = [];
   export let isExpanded: boolean = false;
 
   const dispatch = createEventDispatcher();
@@ -20,6 +21,10 @@
   let description = node.data.description || '';
   let assignedRoleId: number | null | '' = node.data.assignedRoleId ?? null;
   
+  let localActions: string[] = [];
+  let newAction = '';
+  const suggestedActions = ['Approve', 'Reject', 'Return', 'Complete'];
+
   let linkedFields: FormFieldPayload[] = [];
   let availableFields: FieldDefinition[] = [];
   let selectedFieldToAdd: FieldDefinition | null = null;
@@ -27,13 +32,7 @@
 
   $: {
     if (formFields && $fieldDefinitionStore.fieldMap.size > 0) {
-      linkedFields = formFields
-        .map(ff => ({
-          ...ff,
-          fieldDefinition: $fieldDefinitionStore.fieldMap.get(ff.fieldDefId)
-        }))
-        .filter(ff => ff.fieldDefinition)
-        .sort((a, b) => a.displayOrder - b.displayOrder);
+      linkedFields = formFields.map(ff => ({ ...ff, fieldDefinition: $fieldDefinitionStore.fieldMap.get(ff.fieldDefId) })).filter(ff => ff.fieldDefinition).sort((a, b) => a.displayOrder - b.displayOrder);
     }
   }
 
@@ -44,16 +43,29 @@
     }
   }
 
-  function handleUpdate() {
+  function handleUpdate(dispatchActions = false) {
     const finalRoleId = assignedRoleId === '' ? null : Number(assignedRoleId);
     const selectedRole = $processRoleStore.roles.find(r => r.id === finalRoleId);
     
-    dispatch('update', {
-      label,
-      description,
-      assignedRoleId: finalRoleId,
-      assignedRoleName: selectedRole?.name || ''
-    });
+    const payload: Record<string, any> = { label, description, assignedRoleId: finalRoleId, assignedRoleName: selectedRole?.name || '' };
+    if (dispatchActions) {
+      payload.actions = localActions;
+    }
+    dispatch('update', payload);
+  }
+
+  function addAction(action: string) {
+    const sanitizedAction = action.trim();
+    if (sanitizedAction && !localActions.includes(sanitizedAction)) {
+      localActions = [...localActions, sanitizedAction];
+      handleUpdate(true);
+    }
+    newAction = '';
+  }
+
+  function removeAction(action: string) {
+    localActions = localActions.filter(a => a !== action);
+    handleUpdate(true);
   }
 
   function handleApplyFormFields() {
@@ -89,11 +101,7 @@
   }
 
   function toggleValidation(fieldDefId: number) {
-    if (openValidations.has(fieldDefId)) {
-      openValidations.delete(fieldDefId);
-    } else {
-      openValidations.add(fieldDefId);
-    }
+    openValidations.has(fieldDefId) ? openValidations.delete(fieldDefId) : openValidations.add(fieldDefId);
     openValidations = openValidations;
   }
 
@@ -130,12 +138,14 @@
     label = node.data.label || '';
     description = node.data.description || '';
     assignedRoleId = node.data.assignedRoleId ?? null;
+    localActions = [...actions];
     currentNodeId = node.id;
     openValidations.clear();
   }
 
   onMount(() => {
     fieldDefinitionStore.fetchFields();
+    localActions = [...actions];
   });
 
 </script>
@@ -148,11 +158,11 @@
     </div>
     <div class="form-group">
       <label for="task-label">{$_('editor.task_name_label')}</label>
-      <input id="task-label" type="text" bind:value={label} on:blur={handleUpdate} {disabled} />
+      <input id="task-label" type="text" bind:value={label} on:blur={() => handleUpdate()} {disabled} />
     </div>
     <div class="form-group">
       <label for="node-description">{$_('editor.description_label')}</label>
-      <textarea id="node-description" bind:value={description} on:blur={handleUpdate} rows="4" placeholder={$_('editor.description_placeholder')} {disabled} ></textarea>
+      <textarea id="node-description" bind:value={description} on:blur={() => handleUpdate()} rows="4" placeholder={$_('editor.description_placeholder')} {disabled} ></textarea>
     </div>
     <hr class="divider" />
     <div class="form-group">
@@ -163,7 +173,7 @@
       {#if $processRoleStore.loading}
         <div class="loading-placeholder">{$_('process_model_list.loading')}</div>
       {:else}
-        <select id="assigned-role" bind:value={assignedRoleId} on:change={handleUpdate} class:error={node.type === 'userTask' && !assignedRoleId} {disabled}>
+        <select id="assigned-role" bind:value={assignedRoleId} on:change={() => handleUpdate()} class:error={node.type === 'userTask' && !assignedRoleId} {disabled}>
           <option value="">-- {$_('editor.no_role_assigned')} --</option>
           {#each $processRoleStore.roles as role (role.id)}
             <option value={role.id}>{role.name}</option>
@@ -175,6 +185,37 @@
       {/if}
     </div>
     <hr class="divider" />
+
+    {#if node.type === 'userTask'}
+      <div class="form-group">
+        <label for="task-actions">{$_('editor.actions_label')}</label>
+        <div class="tags-container">
+          {#each localActions as action}
+            <div class="tag">
+              {action}
+              <button on:click={() => removeAction(action)} disabled={disabled}>&times;</button>
+            </div>
+          {/each}
+        </div>
+        <div class="add-action-container">
+          <input type="text" bind:value={newAction} placeholder={$_('editor.add_action_placeholder')} on:keydown={(e) => e.key === 'Enter' && addAction(newAction)} disabled={disabled} />
+          <button class="add-btn-sm" on:click={() => addAction(newAction)} disabled={disabled || !newAction.trim()}>
+            <Icon name="plus" size={16} />
+          </button>
+        </div>
+        <div class="suggestions-container">
+          <span>{$_('editor.suggested_actions_label')}</span>
+          {#each suggestedActions as suggestion}
+            {@const suggestionKey = `editor.action_${suggestion.toLowerCase()}`}
+            {#if !localActions.includes($_(suggestionKey))}
+              <button class="suggestion-btn" on:click={() => addAction($_(suggestionKey))} disabled={disabled}>+ {$_(suggestionKey)}</button>
+            {/if}
+          {/each}
+        </div>
+      </div>
+      <hr class="divider" />
+    {/if}
+    
     {#if !isExpanded}
       <button class="form-fields-btn" on:click={() => dispatch('togglePanel', { expand: true })} {disabled}>
         <span>{$_('editor.form_data_button')}</span>
@@ -266,14 +307,14 @@
   {/if}
 </div>
 
-<style> 
-  :global(.svelte-select) { --background: var(--bg-secondary); --border: 1px solid #d1d5db; --border-radius: 6px; --font-size: 14px; --height: 43.6px; --placeholder-color: var(--text-secondary); --item-hover-bg: var(--bg-tertiary); --list-background: var(--bg-secondary); }
+<style>
+  :global(.svelte-select) { --background: var(--bg-secondary); --border: 1px solid var(--border-color); --border-radius: 6px; --font-size: 14px; --height: 43.6px; --placeholder-color: var(--text-secondary); --item-hover-bg: var(--bg-tertiary); --item-is-active-color: var(--accent-color); --list-background: var(--bg-secondary); }
   :global(.svelte-select-list) { z-index: 10; border: 1px solid var(--border-color); }
   :global(.svelte-select__clear-indicator) { color: var(--text-secondary); }
   :global(.svelte-select-input) { display: grid; grid-template-columns: 1fr; }
   :global(.svelte-select-input > *) { grid-column: 1; grid-row: 1; width: 100%; }
-  :global(.value-container) {max-width: 13.6rem;}
-  .panel-layout { display: grid; grid-template-columns: 1fr; width: 100%;}
+  :global(.value-container) { max-width: 13.6rem; }
+  .panel-layout { display: grid; grid-template-columns: 1fr; width: 100%; }
   .panel-layout.is-expanded { grid-template-columns: 300px 1fr; }
   .properties-column { display: flex; flex-direction: column; gap: 1.25rem; padding-right: 1rem; }
   .form-fields-column { display: flex; flex-direction: column; gap: 1rem; padding-left: 1rem; border-left: 1px solid var(--border-color); }
@@ -287,7 +328,7 @@
   .add-btn { display: flex; align-items: center; gap: 0.5rem; background-color: #22c55e; color: white; border: none; padding: 0 1rem; border-radius: 6px; font-weight: 500; cursor: pointer; }
   .add-btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
 
-  .linked-fields-list-container { flex-grow: 1; overflow-y: auto; padding-right: 4px;}
+  .linked-fields-list-container { flex-grow: 1; overflow-y: auto; padding-right: 4px; }
   .empty-list-placeholder { display: flex; align-items: center; justify-content: center; height: 100%; border: 2px dashed var(--border-color); border-radius: 8px; color: var(--text-secondary); }
   .linked-fields-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
   .linked-field-item-wrapper { display: flex; flex-direction: column; background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; }
@@ -297,9 +338,9 @@
   .drag-handle:active { cursor: grabbing; }
 
   .field-main-content { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.5rem; }
-  .field-info { display: flex; align-items: center; gap: 0.5rem; justify-content: space-between;}
+  .field-info { display: flex; align-items: center; gap: 0.5rem; justify-content: space-between; }
   .field-label { font-weight: 500; white-space: normal; overflow: hidden; text-overflow: ellipsis; }
-
+  
   .field-controls { display: flex; gap: 1rem; font-size: 0.875rem; }
   .field-controls label { display: flex; align-items: center; gap: 0.25rem; cursor: pointer; }
 
@@ -328,5 +369,18 @@
   select.error { border-color: #ef4444; }
   .error-message { font-size: 12px; color: #ef4444; margin-top: 0.25rem; }
   .loading-placeholder { padding: 0.6rem 0.75rem; background-color: var(--bg-secondary); border-radius: 6px; color: var(--text-secondary); font-style: italic; }
-  input,textarea,select {background-color: var(--bg-secondary);}
+  input,textarea,select { background-color: var(--bg-secondary); }
+  
+  .tags-container { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .tag { display: flex; align-items: center; background-color: var(--accent-color); color: white; padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.875rem; }
+  .tag button { background: none; border: none; color: white; margin-left: 0.5rem; cursor: pointer; font-size: 1rem; padding: 0; line-height: 1; }
+  
+  .add-action-container { display: flex; gap: 0.5rem; }
+  .add-action-container input { flex-grow: 1; }
+  .add-btn-sm { display: flex; align-items: center; justify-content: center; background-color: #22c55e; color: white; border: none; padding: 0 0.75rem; border-radius: 6px; cursor: pointer; }
+  .add-btn-sm:disabled { background-color: #9ca3af; cursor: not-allowed; }
+  
+  .suggestions-container { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.75rem; font-size: 0.8rem; color: var(--text-secondary); }
+  .suggestion-btn { background-color: var(--bg-secondary); border: 1px solid var(--border-color); padding: 0.2rem 0.6rem; border-radius: 6px; cursor: pointer; }
+  .suggestion-btn:hover { background-color: var(--bg-hover); }
 </style>

@@ -78,6 +78,7 @@
   const nodes = writable(initialNodes);
   const edges = writable<Edge[]>([]);
   const formFieldsByElementId = writable<Record<string, FormFieldPayload[]>>({});
+  const actionsByElementId = writable<Record<string, string[]>>({});
 
   onMount(async () => {
     isBrowser = true;
@@ -117,6 +118,14 @@
                 return acc;
             }, {} as Record<string, FormFieldPayload[]>);
             formFieldsByElementId.set(initialFormFields);
+
+            const initialActions = data.elements.reduce((acc, element) => {
+                if (element.actions && element.bpmnElementId) {
+                    acc[element.bpmnElementId] = element.actions;
+                }
+                return acc;
+            }, {} as Record<string, string[]>);
+            actionsByElementId.set(initialActions);
         }
 
       } catch (error) {
@@ -151,24 +160,32 @@
     const currentNodes = get(nodes);
     const currentEdges = get(edges);
     const { elements: baseElements, sequences } = transformFlowToAPI(currentNodes, currentEdges);
+    
     const allFormFields = get(formFieldsByElementId);
+    const allActions = get(actionsByElementId);
 
     const finalElements = baseElements.map(element => {
         const formFields = allFormFields[element.bpmnElementId];
+        const actions = allActions[element.bpmnElementId];
+
+        const elementWithBusinessData = { ...element };
+
         if (formFields) {
             const cleanedFormFields = formFields.map(field => {
                 const { fieldDefinition, ...rest } = field;
-                // For new fields, 'id' might be undefined or null.
-                // The backend rule is: if the id is not sent, it's a new field.
-                // So, we only strip it if it's explicitly part of the object.
                 if (rest.id === undefined || rest.id === null) {
                     delete rest.id;
                 }
                 return rest;
             });
-            return { ...element, formFields: cleanedFormFields };
+            elementWithBusinessData.formFields = cleanedFormFields;
         }
-        return element;
+
+        if (actions) {
+            elementWithBusinessData.actions = actions;
+        }
+
+        return elementWithBusinessData;
     });
     
     const processData = get(processDefinition);
@@ -325,9 +342,17 @@
 
   function handleUpdateNode(event: CustomEvent<Record<string, any>>) {
     if (!$selectedNode) return;
-    const updatedData = event.detail;
-    nodes.update(nds => nds.map(n => n.id === $selectedNode?.id ? { ...n, data: { ...n.data, ...updatedData } } : n));
-    selectedNode.update(n => n ? { ...n, data: { ...n.data, ...updatedData } } : null);
+    const { actions, ...visualData } = event.detail;
+
+    if (actions !== undefined) {
+      actionsByElementId.update(current => {
+        current[$selectedNode!.id] = actions;
+        return current;
+      });
+    }
+
+    nodes.update(nds => nds.map(n => n.id === $selectedNode?.id ? { ...n, data: { ...n.data, ...visualData } } : n));
+    selectedNode.update(n => n ? { ...n, data: { ...n.data, ...visualData } } : null);
   }
 
   function handleUpdateEdge(event: CustomEvent<{ condition?: string }>) {
@@ -494,6 +519,7 @@
         <TaskPropertiesPanel 
           node={$selectedNode} 
           formFields={$formFieldsByElementId[$selectedNode.id] || []}
+          actions={$actionsByElementId[$selectedNode.id] || []}
           isExpanded={isPanelExpanded}
           on:update={handleUpdateNode} 
           on:updateFormFields={handleUpdateFormFields}

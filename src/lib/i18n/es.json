@@ -99,7 +99,9 @@
     "confirm_action_title": "Confirmar Acción: {action}",
     "confirm_action_message": "¿Estás seguro de que deseas finalizar esta tarea?",
     "processing_button": "Procesando...",
-    "no_documents": "No hay documentos adjuntos."
+    "no_documents": "No hay documentos adjuntos.",
+    "request_description_title": "Descripción de la Solicitud",
+    "comments_history_title": "Historial de Comentarios"
   },
   "user_management": {
     "title": "Administración",
@@ -271,7 +273,15 @@
     "contextual_validations_tooltip": "Validaciones contextuales",
     "remove_field_tooltip": "Eliminar campo",
     "contextual_validations_label": "Validaciones Contextuales (JSON)",
-    "cancel_button": "Cancelar"
+    "cancel_button": "Cancelar",
+    "actions_label": "Acciones de Tarea",
+    "actions_helper": "Define los botones de resultado que verá el usuario.",
+    "add_action_placeholder": "Escribir nueva acción...",
+    "suggested_actions_label": "Sugerencias:",
+    "action_approve": "Aprobar",
+    "action_reject": "Rechazar",
+    "action_return": "Devolver",
+    "action_complete": "Completar"
   },
   "new_instance": {
     "back_to_list": "Volver a la Lista",

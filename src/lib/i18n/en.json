@@ -99,7 +99,9 @@
     "confirm_action_title": "Confirm Action: {action}",
     "confirm_action_message": "Are you sure you want to complete this task?",
     "processing_button": "Processing...",
-    "no_documents": "No documents attached."
+    "no_documents": "No documents attached.",
+    "request_description_title": "Request Description",
+    "comments_history_title": "Comments History"
   },
   "user_management": {
     "title": "Administration",
@@ -271,7 +273,15 @@
     "contextual_validations_tooltip": "Contextual validations",
     "remove_field_tooltip": "Remove field",
     "contextual_validations_label": "Contextual Validations (JSON)",
-    "cancel_button": "Cancel"
+    "cancel_button": "Cancel",
+    "actions_label": "Task Actions",
+    "actions_helper": "Define the outcome buttons the user will see.",
+    "add_action_placeholder": "Type new action...",
+    "suggested_actions_label": "Suggestions:",
+    "action_approve": "Approve",
+    "action_reject": "Reject",
+    "action_return": "Return",
+    "action_complete": "Complete"
   },
   "new_instance": {
     "back_to_list": "Back to List",

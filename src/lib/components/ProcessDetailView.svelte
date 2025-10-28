@@ -62,8 +62,8 @@
   $: currentStepNumber = executedTimeline.length;
 
   function getStatusIcon(status: TimelineStatus): { name: string; color: string } {
-    if (status === 'COMPLETED') return { name: 'check-circle', color: 'var(--success-color)' };
-    if (status === 'IN_PROGRESS') return { name: 'loader', color: 'var(--accent-color)' };
+    if (status === 'COMPLETED') return { name: 'check-circle', color: 'white' };
+    if (status === 'PENDING') return { name: 'loader', color: 'var(--accent-color)' };
     return { name: 'circle', color: 'var(--text-secondary)' };
   }
 </script>

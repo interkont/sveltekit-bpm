@@ -16,6 +16,7 @@
     let comments: string = '';
     let formData: Record<string, any> = {};
     let isSubmitting = false;
+    let actionOptions: string[] = [];
 
     // --- Reactive variables derived from the store state ---
     $: task = $taskDetailStore.task;
@@ -27,17 +28,28 @@
     $: documentsData = [] as DocumentGroup[];
 
     // When the form definition loads, initialize the formData for editable fields
-    $: if (formDefinition) {
-      formData = {};
-      formDefinition.fields.forEach(field => {
-        if (!field.validations.isReadonly) {
-          formData[field.name] = field.value ?? '';
-        }
-      });
-      if (formDefinition.actions.length > 0) {
-        selectedAction = formDefinition.actions[0];
-      }
+    $: if (formDefinition?.fields) {
+        formData = {};
+        formDefinition.fields.forEach(field => {
+            if (!field.validations.isReadonly) {
+            formData[field.name] = field.value ?? '';
+            }
+        });
     }
+    // When the actions load, set them up and select the first one by default.
+    // This now runs independently and won't reset the user's selection.
+    $: if (formDefinition?.actions) {
+        actionOptions = [...formDefinition.actions];
+        if (actionOptions.length > 0 && (!selectedAction || !actionOptions.includes(selectedAction))) {
+            selectedAction = actionOptions[0];
+        }
+    }
+
+    // --- FIX: Reactive statement to check form validity ---
+    $: isFormInvalid = formDefinition?.fields.some(field =>
+        field.validations?.isRequired && !field.validations?.isReadonly && (formData[field.name] === null || formData[field.name] === undefined || formData[field.name] === '')
+    ) ?? true;
+
 
     function mapGeneralInfo(instance: ProcessInstance): GeneralInfoItem[] {
         return [
@@ -114,8 +126,8 @@
     $: currentStepNumber = executedTimeline.length;
 
     function getStatusIcon(status: TimelineStatus): { name: string; color: string } {
-        if (status === 'COMPLETED') return { name: 'check-circle', color: 'var(--success-color)' };
-        if (status === 'IN_PROGRESS') return { name: 'loader', color: 'var(--accent-color)' };
+        if (status === 'COMPLETED') return { name: 'check-circle', color: 'white' };
+        if (status === 'PENDING') return { name: 'loader', color: 'var(--accent-color)' };
         return { name: 'circle', color: 'var(--text-secondary)' };
     }
 </script>
@@ -155,30 +167,57 @@
             {#if activeTab === 'form'}
                 <div class="form-content">
                     <!-- Columna Izquierda: Formulario Dinámico -->
-                    <div class="dynamic-form">
-                        <h3><Icon name="file-text" size={18}/> {$_('task_detail.form_title')}</h3>
-                        {#each formDefinition.fields as field (field.name)}
+                    <div id="formdefinition">
+                        <div class="dynamic-form">
+                            <h3><Icon name="file-text" size={18}/> {$_('task_detail.form_title')}</h3>
+                            {#each formDefinition.fields as field (field.name)}
+                                <div class="form-field">
+                                    <label for={field.name}>
+                                    {field.label}
+                                    {#if field.validations?.isRequired && !field.validations?.isReadonly}<span class="required-star">*</span>{/if}
+                                    </label>
+                                    
+                                    {#if field.validations?.isReadonly}
+                                        <div class="value-box">{field.value}</div>
+                                    {:else if field.fieldType === 'NUMBER'}
+                                        <input type="number" id={field.name} bind:value={formData[field.name]} required={field.validations?.isRequired} />
+                                    {:else if field.fieldType === 'TEXTAREA'}
+                                        <textarea id={field.name} rows="4" bind:value={formData[field.name]} required={field.validations?.isRequired}></textarea>
+                                    {:else if field.fieldType === 'DATE'}
+                                        <input type="date" id={field.name} bind:value={formData[field.name]} required={field.validations?.isRequired} />
+                                    {:else}
+                                        <input type="text" id={field.name} bind:value={formData[field.name]} required={field.validations?.isRequired} />
+                                    {/if}
+                                </div>
+                            {/each}
+                        </div>
+                        <div class="action-section">
+                            <h3><Icon name="check-square" size={18}/> {$_('task_detail.complete_task_title')}</h3>
                             <div class="form-field">
-                                <label for={field.name}>
-                                {field.label}
-                                {#if field.validations.isRequired && !field.validations.isReadonly}<span class="required-star">*</span>{/if}
-                                </label>
-                                
-                                {#if field.validations.isReadonly}
-                                    <div class="value-box">{field.value}</div>
-                                {:else if field.fieldType === 'NUMBER'}
-                                    <input type="number" id={field.name} bind:value={formData[field.name]} required={field.validations.isRequired} />
-                                {:else if field.fieldType === 'TEXTAREA'}
-                                    <textarea id={field.name} rows="4" bind:value={formData[field.name]} required={field.validations.isRequired}></textarea>
-                                {:else if field.fieldType === 'DATE'}
-                                    <input type="date" id={field.name} bind:value={formData[field.name]} required={field.validations.isRequired} />
-                                {:else}
-                                    <input type="text" id={field.name} bind:value={formData[field.name]} required={field.validations.isRequired} />
-                                {/if}
+                              <label for="action-select">{$_('task_detail.select_action_label')}</label>
+                              <select id="action-select" bind:value={selectedAction}>
+                                {#each actionOptions as action}
+                                    <option value={action}>{action}</option>
+                                {/each}
+                              </select>
                             </div>
-                        {/each}
+                            <div class="form-field">
+                              <label for="comments-textarea">{$_('task_detail.comments_label')}</label>
+                              <textarea id="comments-textarea" rows="4" placeholder={$_('task_detail.comments_placeholder')} bind:value={comments}></textarea>
+                            </div>
+                            <div class="form-actions">
+                              <button class="cancel-btn" on:click={taskDetailStore.hide}>{$_('task_detail.cancel_button')}</button>
+                              <button class="submit-btn" on:click={confirmAndSubmit} disabled={isSubmitting || isFormInvalid}>
+                                {#if isSubmitting}
+                                    <Icon name="loader" size={16} spinning={true} />
+                                    <span>{$_('task_detail.processing_button')}</span>
+                                {:else}
+                                    {$_('task_detail.complete_button')}
+                                {/if}
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    
                     <!-- Columna Derecha: Acciones y Contexto -->
                     <div class="action-form">
                         <section class="info-section">
@@ -197,34 +236,7 @@
                                     <p class="no-data-placeholder">{$_('process_detail.no_business_data')}</p>
                                 {/if}
                             </div>
-                        </section>
-
-                        <div class="action-section">
-                            <h3><Icon name="check-square" size={18}/> {$_('task_detail.complete_task_title')}</h3>
-                            <div class="form-field">
-                              <label for="action-select">{$_('task_detail.select_action_label')}</label>
-                              <select id="action-select" bind:value={selectedAction}>
-                                {#each formDefinition.actions as action}
-                                    <option value={action}>{action}</option>
-                                {/each}
-                              </select>
-                            </div>
-                            <div class="form-field">
-                              <label for="comments-textarea">{$_('task_detail.comments_label')}</label>
-                              <textarea id="comments-textarea" rows="4" placeholder={$_('task_detail.comments_placeholder')} bind:value={comments}></textarea>
-                            </div>
-                            <div class="form-actions">
-                              <button class="cancel-btn" on:click={taskDetailStore.hide}>{$_('task_detail.cancel_button')}</button>
-                              <button class="submit-btn" on:click={confirmAndSubmit} disabled={isSubmitting}>
-                                {#if isSubmitting}
-                                    <Icon name="loader" size={16} spinning={true} />
-                                    <span>{$_('task_detail.processing_button')}</span>
-                                {:else}
-                                    {$_('task_detail.complete_button')}
-                                {/if}
-                                </button>
-                            </div>
-                        </div>
+                        </section>  
                     </div>
                 </div>
             {:else if activeTab === 'details'}
@@ -390,7 +402,6 @@
 }
 .dynamic-form {
     background-color: var(--bg-primary);
-    border-radius: 12px;
     overflow-y: auto;
     border-right: 1px solid var(--border-color);
     padding-right: 2rem;
@@ -400,7 +411,7 @@
     flex-direction: column;
     gap: 1.5rem;
 }
-.action-form h3, .dynamic-form h3 {
+.action-form h3, .dynamic-form h3, .action-section h3 {
   display: flex; align-items: center; gap: 0.5rem; margin: 0 0 1.5rem 0;
   font-size: 1.25rem; color: var(--text-primary); font-weight: 600;
   padding-bottom: 1rem;
@@ -424,7 +435,10 @@
     word-wrap: break-word;
 }
 .action-section {
-    margin-top: auto;
+    padding-top: 2rem;
+    padding-right: 2rem;
+    border-right: 1px solid var(--border-color);
+    padding-bottom: 1.5rem;
 }
 .form-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: auto; padding-top: 1rem; }
 button { cursor: pointer; font-weight: 500; padding: 0.75rem 1.5rem; border-radius: 8px; border: 1px solid transparent; }
@@ -437,6 +451,11 @@ button { cursor: pointer; font-weight: 500; padding: 0.75rem 1.5rem; border-radi
 .right-column-details { display: flex; flex-direction: column; min-width: 0; overflow-y: auto; }
 .tab-content-details { display: flex; flex-direction: column; gap: 2rem; }
 .info-section { background-color: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-color); }
+.info-section h3 {
+  display: flex; align-items: center; gap: 0.5rem; margin: 0 0 1rem 0;
+  font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase;
+  letter-spacing: 0.05em; font-weight: 600;
+}
 .form-placeholder-details { display: flex; flex-direction: column; gap: 1.5rem; }
 
 .data-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 1rem; }
