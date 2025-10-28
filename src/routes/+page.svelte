@@ -21,6 +21,8 @@
 	import ProcessModelListView from '$lib/components/ProcessModelListView.svelte';
     import UserManagementView from '$lib/components/UserManagementView.svelte';
 	import StartProcessFormView from '$lib/components/StartProcessFormView.svelte';
+	import DataLibraryView from '$lib/components/DataLibraryView.svelte';
+	import RulesLogView from '$lib/components/RulesLogView.svelte';
 
 	// Paneles de Detalle
 	import TaskDetailPanel from '$lib/components/TaskDetailPanel.svelte';
@@ -83,6 +85,10 @@
 			<StartProcessFormView processDefinition={viewContext as ProcessDefinition} on:navigate={handleNavigation} />
 		{:else if currentView === 'users'} 
 			<UserManagementView />
+		{:else if currentView === 'data-library'}
+			<DataLibraryView />
+		{:else if currentView === 'rules-log'}
+			<RulesLogView />
 		{/if}
 	</SvelteFlowProvider>
 

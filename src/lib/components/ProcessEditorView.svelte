@@ -24,7 +24,7 @@
 
   import { processDefinitionService } from '$lib/services/processDefinitionService';
   import { processRoleStore } from '$lib/stores/processRoleStore';
-  import type { ProcessDefinitionData, ProcessDefinitionPayload } from '$lib/types';
+  import type { ProcessDefinitionData, ProcessDefinitionPayload, FormFieldPayload } from '$lib/types';
   import { transformFlowToAPI } from '$lib/utils/process-transformer';
   import { modal } from '$lib/stores/modal';
   import { toast } from '$lib/stores/toast';
@@ -53,6 +53,7 @@
   let isSaving = writable(false);
   let isProcessPropertiesValid = writable(false);
   let bpmnProcessId: string | undefined = undefined;
+  let isPanelExpanded = false;
 
   const processDefinition = writable<ProcessDefinitionData>({
     name: 'New Process Model',
@@ -76,6 +77,7 @@
   const initialNodes: Node[] = processId ? [] : [ { id: `startEvent_${Date.now()}`, type: 'startEvent', data: { label: 'Start', assignedRoleId: null }, position: { x: 50, y: 150 } } ];
   const nodes = writable(initialNodes);
   const edges = writable<Edge[]>([]);
+  const formFieldsByElementId = writable<Record<string, FormFieldPayload[]>>({});
 
   onMount(async () => {
     isBrowser = true;
@@ -105,6 +107,16 @@
         } else {
             nodes.set([ { id: `startEvent_${Date.now()}`, type: 'startEvent', data: { label: 'Start' }, position: { x: 50, y: 150 } } ]);
             edges.set([]);
+        }
+
+        if (data.elements && Array.isArray(data.elements)) {
+            const initialFormFields = data.elements.reduce((acc, element) => {
+                if (element.formFields && element.bpmnElementId) {
+                    acc[element.bpmnElementId] = element.formFields;
+                }
+                return acc;
+            }, {} as Record<string, FormFieldPayload[]>);
+            formFieldsByElementId.set(initialFormFields);
         }
 
       } catch (error) {
@@ -138,12 +150,32 @@
     isSaving.set(true);
     const currentNodes = get(nodes);
     const currentEdges = get(edges);
-    const { elements, sequences } = transformFlowToAPI(currentNodes, currentEdges);
+    const { elements: baseElements, sequences } = transformFlowToAPI(currentNodes, currentEdges);
+    const allFormFields = get(formFieldsByElementId);
+
+    const finalElements = baseElements.map(element => {
+        const formFields = allFormFields[element.bpmnElementId];
+        if (formFields) {
+            const cleanedFormFields = formFields.map(field => {
+                const { fieldDefinition, ...rest } = field;
+                // For new fields, 'id' might be undefined or null.
+                // The backend rule is: if the id is not sent, it's a new field.
+                // So, we only strip it if it's explicitly part of the object.
+                if (rest.id === undefined || rest.id === null) {
+                    delete rest.id;
+                }
+                return rest;
+            });
+            return { ...element, formFields: cleanedFormFields };
+        }
+        return element;
+    });
+    
     const processData = get(processDefinition);
     const payload: ProcessDefinitionPayload = {
       ...processData,
       diagramJson: { nodes: currentNodes, edges: currentEdges, viewport: getViewport() },
-      elements,
+      elements: finalElements,
       sequences,
     };
     if (processId && bpmnProcessId) {
@@ -244,9 +276,9 @@
     });
   }
 
-  function onNodeClick(event: NodeMouseEvent) { selectedNode.set(event.node); selectedEdge.set(null); }
-  function onEdgeClick(event: EdgeMouseEvent) { selectedEdge.set(event.edge); selectedNode.set(null); }
-  function onPaneClick() { selectedNode.set(null); selectedEdge.set(null); }
+  function onNodeClick(event: NodeMouseEvent) { selectedNode.set(event.node); selectedEdge.set(null); isPanelExpanded = false; }
+  function onEdgeClick(event: EdgeMouseEvent) { selectedEdge.set(event.edge); selectedNode.set(null); isPanelExpanded = false; }
+  function onPaneClick() { selectedNode.set(null); selectedEdge.set(null); isPanelExpanded = false; }
 
   function onSelectionChange(params: { nodes: any; edges: any; }) {
     selectedElements = params;
@@ -260,6 +292,7 @@
       selectedNode.set(null);
       selectedEdge.set(null);
     }
+    isPanelExpanded = false;
   }
 
   function handleKeyDown(event: KeyboardEvent) { if (event.key === 'Delete') { deleteElements(selectedElements); } }
@@ -316,12 +349,24 @@
     selectedEdge.update(e => e ? { ...e, data: { ...e.data, ...updatedData } } : null);
   }
   
+  function handleUpdateFormFields(event: CustomEvent<{ nodeId: string; fields: FormFieldPayload[] }>) {
+    const { nodeId, fields } = event.detail;
+    formFieldsByElementId.update(current => {
+        current[nodeId] = fields;
+        return current;
+    });
+  }
+
   function handleProcessUpdate(event: CustomEvent<ProcessDefinitionData>) {
     processDefinition.update(pd => ({ ...pd, ...event.detail }));
   }
 
   function handleValidation(event: CustomEvent<{ isValid: boolean }>) {
     isProcessPropertiesValid.set(event.detail.isValid);
+  }
+
+  function handleTogglePanel(event: CustomEvent<{ expand: boolean }>) {
+    isPanelExpanded = event.detail.expand;
   }
 
   function onDragOver(event: DragEvent) {
@@ -373,7 +418,7 @@
 
 <svelte:window on:keydown={handleKeyDown} />
 
-<div class="page-container">
+<div class="page-container" class:panel-expanded={isPanelExpanded}>
   <header class="action-bar view-header">
     <div class="title-cluster">
       <a href="/#process-models" class="back-link" title={$_('editor.back_to_list')}>
@@ -446,7 +491,15 @@
     {#if $selectedNode}
       <h3 class="panel-title">{$_('editor.node_properties_title')}</h3>
       {#if $selectedNode.type === 'userTask' || $selectedNode.type === 'startEvent'}
-        <TaskPropertiesPanel node={$selectedNode} on:update={handleUpdateNode} disabled={$mode === 'view'} />
+        <TaskPropertiesPanel 
+          node={$selectedNode} 
+          formFields={$formFieldsByElementId[$selectedNode.id] || []}
+          isExpanded={isPanelExpanded}
+          on:update={handleUpdateNode} 
+          on:updateFormFields={handleUpdateFormFields}
+          on:togglePanel={handleTogglePanel}
+          disabled={$mode === 'view'} 
+        />
       {:else if $selectedNode.type === 'autoTask'}
         <AutoTaskPropertiesPanel node={$selectedNode} on:update={handleUpdateNode} disabled={$mode === 'view'} />
       {:else if $selectedNode.type === 'exclusiveGateway' || $selectedNode.type === 'parallelGateway'}
@@ -478,8 +531,14 @@
     display: grid;
     grid-template-rows: auto 1fr;
     grid-template-columns: 240px 1fr 320px;
-    height: 100%;
+    margin: -2rem;
     overflow: hidden;
+    overflow-y: auto;
+    min-height:90vh;
+    transition: grid-template-columns 0.3s ease-in-out;
+  }
+  .page-container.panel-expanded {
+    grid-template-columns: 240px 1fr 740px;
   }
   .canvas-container.full-width {
     grid-column: 1 / span 2;
@@ -546,12 +605,11 @@
 
   :global(.palette) { grid-row: 2; }
   .canvas-container { grid-row: 2; }
-  .properties-panel { grid-row: 2; }
   .properties-panel {
+    grid-row: 2;
     background-color: var(--bg-primary);
     border-left: 1px solid #e5e7eb;
     padding: 1rem;
-    overflow-y: auto;
   }
   .panel-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 1.5rem; }
   .canvas-container { background-color: #f9fafb; position: relative; }

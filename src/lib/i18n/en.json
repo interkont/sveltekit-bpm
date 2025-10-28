@@ -176,6 +176,8 @@
     "cases": "Cases",
     "processes": "Processes",
     "teams": "Teams",
+    "data_library": "Data Library",
+    "rules_log": "Rules Log",
     "logout_confirm_title": "Confirm Logout",
     "logout_confirm_message": "Are you sure you want to log out of Flowify?",
     "logout_button": "Log Out",
@@ -251,7 +253,25 @@
     "no_condition_set": "No condition set",
     "process_key_helper": "Unique identifier. Cannot be changed after creation.",
     "condition_helper": "Required if the source is a gateway.",
-    "gateway_label_placeholder": "e.g., Is approved?"
+    "gateway_label_placeholder": "e.g., Is approved?",
+    "form_data_button": "Data Form",
+    "form_fields_title": "Form Fields",
+    "form_fields_json_label": "Field Definitions (JSON)",
+    "apply_changes_button": "Apply Changes",
+    "element_id_label": "Element ID",
+    "optional_label": "(Optional)",
+    "role_required_error": "A role must be assigned.",
+    "add_field_placeholder": "Add field from library...",
+    "add_button": "Add",
+    "no_fields_placeholder": "There are no fields in this form.",
+    "required_abbr": "Req.",
+    "readonly_abbr": "RO",
+    "required_tooltip": "Required",
+    "readonly_tooltip": "Read-Only",
+    "contextual_validations_tooltip": "Contextual validations",
+    "remove_field_tooltip": "Remove field",
+    "contextual_validations_label": "Contextual Validations (JSON)",
+    "cancel_button": "Cancel"
   },
   "new_instance": {
     "back_to_list": "Back to List",
@@ -276,5 +296,13 @@
     "success_toast": "{concept} started successfully.",
     "error_loading_form": "Failed to load form definition.",
     "error_starting_process": "Failed to start {concept}."
+  },
+  "data_library": {
+    "title": "Data Library",
+    "description": "Manage reusable form fields and data structures."
+  },
+  "rules_log": {
+    "title": "Rules Log",
+    "description": "Review and audit the execution of business rules."
   }
 }

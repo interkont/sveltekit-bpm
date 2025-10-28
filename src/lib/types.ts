@@ -104,7 +104,8 @@ export interface ProcessDefinition {
     status: string;
     bpmnProcessId: string;
     createdAt: string;
-    diagramJson?: Record<string, any>; // <-- Changed to a flexible object
+    diagramJson?: Record<string, any>;
+    elements?: ProcessElementPayload[];
 }
 
 // --- ADD: Type for the editable process definition data in the panel ---
@@ -118,6 +119,16 @@ export interface ProcessDefinitionData {
 
 // --- ADD: Types for API Payloads ---
 
+export interface FormFieldPayload {
+    id?: number;
+    fieldDefId: number;
+    displayOrder: number;
+    isRequired: boolean;
+    isReadonly: boolean;
+    contextualValidations?: Record<string, any> | null;
+    fieldDefinition?: FieldDefinition;
+}
+
 export interface ProcessElementPayload {
     bpmnElementId: string;
     name: string;
@@ -126,6 +137,8 @@ export interface ProcessElementPayload {
     assignedRoleId?: number;
     webhook_target?: string;
     sla_definition?: string;
+    formFields?: FormFieldPayload[];
+    actions?: string[]; // Optional actions for USER_TASK
 }
 
 export interface SequenceFlowPayload {
@@ -149,6 +162,15 @@ export interface SaveActionResponse {
 
 
 // --- Tipos para Formularios Dinámicos ---
+
+export interface FieldDefinition {
+  id: number;
+  name: string;
+  label: string;
+  fieldType: 'TEXT' | 'NUMBER' | 'TEXTAREA' | 'DATE';
+  validations: Record<string, any> | null;
+}
+
 
 export interface FormFieldDefinition {
     name: string;

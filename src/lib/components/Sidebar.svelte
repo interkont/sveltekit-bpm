@@ -15,7 +15,9 @@
     tasks: 'TASK',
     processes: 'INST',
     'process-models': 'PROC',
-    users: 'ORG'
+    users: 'ORG',
+    'data-library': 'LIBFORM',
+    'rules-log': 'LOG'
   };
 
   function hasAccess(moduleKey: keyof typeof moduleMap): boolean {
@@ -73,6 +75,18 @@
       <button class:active={activeItem === 'users'} on:click={() => navigate('users')}>
         <Icon name="users" size={24}/>
         <span class="nav-text">{$_('sidebar.teams')}</span>
+      </button>
+    {/if}
+    {#if hasAccess('data-library')}
+      <button class:active={activeItem === 'data-library'} on:click={() => navigate('data-library')}>
+        <Icon name="database" size={24}/>
+        <span class="nav-text">{$_('sidebar.data_library')}</span>
+      </button>
+    {/if}
+    {#if hasAccess('rules-log')}
+      <button class:active={activeItem === 'rules-log'} on:click={() => navigate('rules-log')}>
+        <Icon name="shield-check" size={24}/>
+        <span class="nav-text">{$_('sidebar.rules_log')}</span>
       </button>
     {/if}
   </nav>

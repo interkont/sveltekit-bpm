@@ -176,6 +176,8 @@
     "cases": "Solicitudes",
     "processes": "Procesos",
     "teams": "Organización",
+    "data_library": "Biblioteca de Datos",
+    "rules_log": "Log de Reglas",
     "logout_confirm_title": "Confirmar Cierre de Sesión",
     "logout_confirm_message": "¿Estás seguro de que deseas cerrar tu sesión en Flowify?",
     "logout_button": "Cerrar Sesión",
@@ -251,7 +253,25 @@
     "no_condition_set": "Sin condición establecida",
     "process_key_helper": "Identificador único. No se puede cambiar después de la creación.",
     "condition_helper": "Requerida si el nodo origen es una compuerta.",
-    "gateway_label_placeholder": "ej., ¿Aprobado?"
+    "gateway_label_placeholder": "ej., ¿Aprobado?",
+    "form_data_button": "Formulario de Datos",
+    "form_fields_title": "Campos del Formulario",
+    "form_fields_json_label": "Definición de Campos (JSON)",
+    "apply_changes_button": "Aplicar Cambios",
+    "element_id_label": "Element ID",
+    "optional_label": "(Opcional)",
+    "role_required_error": "Se debe asignar un rol.",
+    "add_field_placeholder": "Añadir campo desde la biblioteca...",
+    "add_button": "Añadir",
+    "no_fields_placeholder": "No hay campos en este formulario.",
+    "required_abbr": "Req.",
+    "readonly_abbr": "Lect.",
+    "required_tooltip": "Requerido",
+    "readonly_tooltip": "Solo Lectura",
+    "contextual_validations_tooltip": "Validaciones contextuales",
+    "remove_field_tooltip": "Eliminar campo",
+    "contextual_validations_label": "Validaciones Contextuales (JSON)",
+    "cancel_button": "Cancelar"
   },
   "new_instance": {
     "back_to_list": "Volver a la Lista",
@@ -276,5 +296,13 @@
     "success_toast": "{concept} iniciado con éxito.",
     "error_loading_form": "Error al cargar la definición del formulario.",
     "error_starting_process": "Error al iniciar el {concept}."
+  },
+  "data_library": {
+    "title": "Biblioteca de Datos",
+    "description": "Gestiona campos de formulario y estructuras de datos reutilizables."
+  },
+  "rules_log": {
+    "title": "Log de Reglas",
+    "description": "Revisa y audita la ejecución de las reglas de negocio."
   }
 }

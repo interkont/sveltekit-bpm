@@ -358,3 +358,41 @@ Se ha continuado con la implementación de la internacionalización (i18n), apli
 
   Nota de Implementación:
   Se identificó y solucionó un caso inicial donde, después de la implementación, el Sidebar aparecía vacío. La causa era la persistencia de un objeto de usuario "antiguo" (sin modules) en localStorage. La solución consiste en cerrar y volver a iniciar sesión una vez para actualizar la estructura de datos en el navegador.
+
+---
+## 17. Gestión Avanzada de Campos de Formulario para Tareas
+
+Se ha reemplazado la edición de `formFields` vía JSON por una interfaz de usuario interactiva y completa en el panel de propiedades del editor. Esta mejora permite a los usuarios gestionar los campos de formulario de una tarea de manera intuitiva, conectándose a una biblioteca de campos centralizada.
+
+### 17.1. Arquitectura de Datos y Servicios
+
+- **Capa de Datos Centralizada**: Se creó una nueva capa de abstracción para la "Biblioteca de Campos" del sistema.
+    - **Servicio (`fieldDefinitionService.ts`)**: Responsable de comunicarse con el nuevo endpoint `GET /api/fields` para obtener todos los campos disponibles.
+    - **Store (`fieldDefinitionStore.ts`)**: Un store de Svelte que gestiona el estado de la biblioteca de campos (carga, errores y datos), cachea los resultados y proporciona un `Map` para búsquedas rápidas por ID.
+- **Modelo de Datos Enriquecido**:
+    - El tipo `FormFieldPayload` fue actualizado para incluir el objeto `fieldDefinition` completo de forma anidada. Esto permite a la UI acceder a toda la información del campo (label, tipo, etc.) sin necesidad de búsquedas adicionales.
+    - La lógica de carga en `ProcessEditorView` ahora popula el estado local con esta estructura de datos enriquecida.
+
+### 17.2. Interfaz de Usuario Interactiva
+
+El `textarea` para editar JSON en `TaskPropertiesPanel.svelte` fue eliminado y reemplazado por una interfaz rica y funcional:
+
+- **Panel Expansible**: El panel de propiedades ahora se expande hacia la izquierda, mostrando una nueva sección dedicada a la gestión de formularios sin ocultar las propiedades originales del nodo. Esta animación es orquestada por el componente padre `ProcessEditorView.svelte`.
+- **Selector de Campos**: Un dropdown con funcionalidad de búsqueda (`svelte-select`) permite a los usuarios buscar y añadir campos desde la biblioteca de campos cargada en el `fieldDefinitionStore`.
+- **Lista Reordenable**:
+    - Los campos vinculados a una tarea se muestran en una lista clara.
+    - Se utiliza la librería `SortableJS` a través de un *action* de Svelte para permitir el reordenamiento de los campos mediante *drag-and-drop*. El `displayOrder` se recalcula automáticamente.
+- **Controles en Línea**: Cada campo en la lista tiene controles directos para:
+    - **Eliminar** el campo de la tarea.
+    - Alternar las propiedades `isRequired` y `isReadonly` mediante checkboxes.
+    - **Validaciones Contextuales**: Un botón de "código" despliega un `textarea` tipo acordeón para que el usuario pueda definir reglas de validación específicas en formato JSON para ese campo en el contexto de esa tarea.
+- **Internacionalización**: Todos los nuevos textos de la interfaz han sido añadidos a los archivos `es.json` y `en.json`.
+
+### 17.3. Lógica de Guardado Inteligente
+
+- **Payload Limpio**: La función de guardado `executeSave` en `ProcessEditorView` fue actualizada para "limpiar" el array `formFields` antes de enviarlo a la API.
+- **Manejo de IDs**: La lógica respeta las reglas del backend para operaciones CRUD:
+    - **Crear**: Los campos nuevos se envían sin la propiedad `id`.
+    - **Actualizar**: Los campos existentes se envían con su `id` correspondiente.
+    - **Eliminar**: Los campos que se eliminan de la lista en la UI simplemente no se incluyen en el array `formFields` del payload final.
+    - El objeto anidado `fieldDefinition` se elimina del payload, ya que es solo para uso del frontend.

@@ -19,8 +19,10 @@ export default defineConfig(({ mode }) => {
         ],
       },
     },
-    // The optimizeDeps section is no longer needed after removing bpmn-js
-    // We can remove it to keep the configuration clean.
+    
+    optimizeDeps: {
+      include: ['svelte-select'],
+    },
 
     // Add this section to fix the Svelte Flow SSR issue
     ssr: {
