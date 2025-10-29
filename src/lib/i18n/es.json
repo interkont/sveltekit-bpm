@@ -331,6 +331,7 @@
     "rows_per_page": "Filas por página:",
     "page_of": "Página {current} de {total}",
     "editor": {
+      "new_field": "Nuevo Campo",
       "create_title": "Crear Nuevo Campo",
       "edit_title": "Editando: {label}",
       "label_label": "Etiqueta",
@@ -345,6 +346,7 @@
       "validations_json_label": "Validaciones (JSON)",
       "validations_json_helper": "Define reglas como maxLength, minValue, etc.",
       "validation_error_required": "Los campos Etiqueta y Nombre Técnico son obligatorios.",
+      "validation_incomplete_message": "Faltan propiedades por configurar.",
       "validation_error_json": "El JSON de validaciones no es válido.",
       "create_success": "Campo creado con éxito.",
       "update_success": "Campo actualizado con éxito.",

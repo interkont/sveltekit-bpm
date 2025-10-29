@@ -331,6 +331,7 @@
     "rows_per_page": "Rows per page:",
     "page_of": "Page {current} of {total}",
     "editor": {
+      "new_field": "New Field",
       "create_title": "Create New Field",
       "edit_title": "Editing: {label}",
       "label_label": "Label",
@@ -345,6 +346,7 @@
       "validations_json_label": "Validations (JSON)",
       "validations_json_helper": "Define rules like maxLength, minValue, etc.",
       "validation_error_required": "Label and Technical Name fields are required.",
+      "validation_incomplete_message": "Some properties are missing or incomplete.",
       "validation_error_json": "The validations JSON is invalid.",
       "create_success": "Field created successfully.",
       "update_success": "Field updated successfully.",

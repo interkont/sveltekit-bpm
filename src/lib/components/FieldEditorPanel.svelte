@@ -8,6 +8,7 @@
   import { fieldDefinitionStore } from '$lib/stores/fieldDefinitionStore';
   import { toast } from '$lib/stores/toast';
   import type { FieldDefinitionPayload } from '$lib/services/fieldDefinitionService';
+  import { sanitizeTechnicalName } from '$lib/utils/stringUtils';
 
   export let isOpen: boolean;
   export let field: FieldDefinition | null = null;
@@ -53,9 +54,28 @@
     }
   }
 
-  // --- FIX: Populate the `texts` object with ALL required translations ---
+  // --- Real-time Validation ---
+  $: isFormInvalid = (() => {
+    if (!formLabel.trim() || !formName.trim()) return true;
+    if (formFieldType === 'SELECT') {
+      if (selectOptions.length === 0 || selectOptions.some(opt => !opt.label.trim() || !opt.value.trim())) {
+        return true;
+      }
+    }
+    if (formFieldType === 'GRID') {
+      if (gridColumns.length === 0) return true;
+      // Check if any column is incomplete
+      if (gridColumns.some(c => !c.name.trim() || !c.label.trim())) return true;
+      // Check if any SELECT column has no options or incomplete options
+      if (gridColumns.some(c => c.type === 'SELECT' && (!c.options || c.options.length === 0 || c.options.some(opt => !opt.label.trim() || !opt.value.trim())))) {
+        return true;
+      }
+    }
+    return false;
+  })();
+
   $: texts = {
-    title: field ? $_('data_library.editor.edit_title', { values: { label: field.label } }) : $_('data_library.editor.create_title'),
+    title: field ? $_('data_library.editor.edit_title', { values: { label: formLabel || $_('data_library.editor.new_field') } }) : $_('data_library.editor.create_title'),
     label_label: $_('data_library.editor.label_label'),
     label_placeholder: $_('data_library.editor.label_placeholder'),
     name_label: $_('data_library.editor.name_label'),
@@ -75,8 +95,17 @@
     datasource_placeholder: $_('data_library.editor.datasource_placeholder'),
     configure_options: $_('data_library.editor.configure_options'),
     options_editor_title: $_('data_library.editor.options_editor_title'),
-    done_button: $_('data_library.editor.done_button')
+    done_button: $_('data_library.editor.done_button'),
+    validation_incomplete_message: $_('data_library.editor.validation_incomplete_message'),
   };
+
+  function handleNameInput(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const sanitized = sanitizeTechnicalName(input.value);
+    if (sanitized !== formName) {
+      formName = sanitized;
+    }
+  }
 
   function handleClose() { dispatch('close'); }
 
@@ -124,7 +153,10 @@
   function removeColumn(index: number) { gridColumns = gridColumns.filter((_, i) => i !== index); }
   
   async function handleSubmit() {
-    if (!formName || !formLabel) { toast.show($_('data_library.editor.validation_error_required'), 'error'); return; }
+    if (isFormInvalid) {
+        toast.show(texts.validation_incomplete_message, 'error');
+        return;
+    }
     let parsedValidations: Record<string, any> = {};
     try {
       if (formFieldType === 'SELECT') {
@@ -162,12 +194,16 @@
       <div class="panel-body">
         <form on:submit|preventDefault={handleSubmit}>
           <div class="form-group"><label for="field-label" class="form-label">{texts.label_label}</label><input type="text" id="field-label" class="form-input" bind:value={formLabel} placeholder={texts.label_placeholder}></div>
-          <div class="form-group"><label for="field-name" class="form-label">{texts.name_label}</label><input type="text" id="field-name" class="form-input" bind:value={formName} placeholder={texts.name_placeholder}><p class="helper-text">{texts.name_helper}</p></div>
+          <div class="form-group"><label for="field-name" class="form-label">{texts.name_label}</label><input type="text" id="field-name" class="form-input" bind:value={formName} on:input={handleNameInput} placeholder={texts.name_placeholder}><p class="helper-text">{texts.name_helper}</p></div>
           <div class="form-group"><label for="field-type" class="form-label">{texts.type_label}</label><select id="field-type" class="form-input" bind:value={formFieldType}>{#each fieldTypes as type}<option value={type}>{type}</option>{/each}</select></div>
           <div class="form-group">
             <h3 class="form-label">{texts.validations_title}</h3>
             {#if formFieldType === 'SELECT'}
-              <button type="button" class="btn btn-secondary" on:click={() => openOptionsEditor({ type: 'top-level' })}> <Icon name="settings" class="mr-2"/> {texts.configure_options} </button>
+              {@const hasOptions = selectOptions && selectOptions.length > 0 && selectOptions.every(opt => opt.label && opt.value)}
+              <button type="button" class="btn btn-secondary" on:click={() => openOptionsEditor({ type: 'top-level' })}> 
+                <Icon name={hasOptions ? 'settings-check' : 'settings-alert'} class="mr-2 {hasOptions ? 'text-green' : 'text-orange'}"/> 
+                {texts.configure_options}
+              </button>
             {:else if formFieldType === 'GRID'}
               <div class="form-group"><label for="grid-datasource" class="form-label">{texts.datasource_label}</label><input id="grid-datasource" class="form-input" bind:value={gridDataSource} placeholder={texts.datasource_placeholder} /></div>
               <div class="validation-list">
@@ -178,7 +214,10 @@
                     <select class="form-input list-input" bind:value={column.type}>{#each gridColumnTypes as type}<option value={type}>{type}</option>{/each}</select>
                     <div class="actions-cell">
                       {#if column.type === 'SELECT'}
-                        <button type="button" class="btn-icon" on:click={() => openOptionsEditor({ type: 'grid', index })} title={texts.configure_options}><Icon name="settings"/></button>
+                        {@const hasOptions = column.options && column.options.length > 0 && column.options.every(opt => opt.label && opt.value)}
+                        <button type="button" class="btn-icon" on:click={() => openOptionsEditor({ type: 'grid', index })} title={texts.configure_options}>
+                          <Icon name={hasOptions ? 'settings-check' : 'settings-alert'} class={hasOptions ? 'text-green' : 'text-orange'}/>
+                        </button>
                       {/if}
                       <button type="button" class="btn-icon btn-icon-danger" on:click={() => removeColumn(index)} title={$_('list.delete_action')}> <Icon name="trash" /> </button>
                     </div>
@@ -193,16 +232,26 @@
         </form>
       </div>
       <footer class="panel-footer">
-        <button type="button" class="btn btn-secondary" on:click={handleClose}>{$_('list.cancel_button')}</button>
-        <button type="button" class="btn btn-primary" on:click={handleSubmit} disabled={isSubmitting}>{#if isSubmitting}<Icon name="loader" size={16} spinning={true} class="mr-2" /><span>{$_('list.saving_button')}</span>{:else}<Icon name="save" size={16} class="mr-2" /><span>{$_('list.save_button')}</span>{/if}</button>
+        <div>
+          {#if isFormInvalid}
+            <div class="validation-message">
+              <Icon name="info" class="mr-2"/>
+              <span>{texts.validation_incomplete_message}</span>
+            </div>
+          {/if}
+        </div>
+        <div class="flex gap-4">
+          <button type="button" class="btn btn-secondary" on:click={handleClose}>{$_('list.cancel_button')}</button>
+          <button type="button" class="btn btn-primary" on:click={handleSubmit} disabled={isSubmitting || isFormInvalid}>{#if isSubmitting}<Icon name="loader" size={16} spinning={true} class="mr-2" /><span>{$_('list.saving_button')}</span>{:else}<Icon name="save" size={16} class="mr-2" /><span>{$_('list.save_button')}</span>{/if}</button>
+        </div>
       </footer>
     </div>
   </div>
 {/if}
 
 {#if isOptionsModalOpen}
-<div class="modal-backdrop">
-  <div class="modal-content">
+<div class="modal-backdrop" on:keydown.escape={closeOptionsEditor}>
+  <div class="modal-content" role="dialog" aria-modal="true">
     <header class="modal-header"><h3 class="modal-title">{texts.options_editor_title}</h3><button class="btn-close" on:click={closeOptionsEditor}><Icon name="x" /></button></header>
     <div class="modal-body validation-list">
       {#each currentEditingOptions as option, i}
@@ -230,10 +279,11 @@
   .form-label { display: block; font-weight: 500; margin-bottom: 0.5rem; font-size: 0.875rem; }
   .form-input { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary); font-size: 1rem; color: var(--text-primary); transition: all 0.2s; }
   .form-input:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 2px var(--accent-color-light); }
-  .panel-footer { padding: 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; align-items: center; gap: 1rem; background: var(--bg-primary); flex-shrink: 0; }
+  .panel-footer { padding: 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 1rem; background: var(--bg-primary); flex-shrink: 0; }
   .btn { padding: 0.6rem 1.2rem; font-weight: 600; font-size: 0.9rem; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; }
   .btn-primary { background-color: var(--accent-color); color: white; }
-  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
   .btn-secondary { background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); }
   .btn-secondary:hover { background: var(--bg-tertiary); }
   .helper-text { font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem; }
@@ -250,11 +300,15 @@
   .btn-icon { background: none; border: none; cursor: pointer; padding: 0.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); transition: all 0.2s ease; }
   .btn-icon-danger:hover { color: #e53e3e; background-color: rgba(229, 62, 62, 0.1); }
   .actions-cell { display: flex; align-items: center; gap: 0.25rem; }
-
   .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; }
   .modal-content { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-primary); border-radius: 12px; box-shadow: var(--shadow-large); z-index: 1001; width: 90%; max-width: 500px; display: flex; flex-direction: column; }
   .modal-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
   .modal-title { font-weight: 600; font-size: 1.1rem; }
   .modal-body { padding: 1.5rem; max-height: 60vh; overflow-y: auto; }
   .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; }
+  :global(.text-green) { color: var(--success-color); }
+  :global(.text-orange) { color: darkorange; }
+  .validation-message { display: flex; align-items: center; font-size: 0.875rem; color: var(--text-secondary); }
+  .flex { display: flex; }
+  .gap-4 { gap: 1rem; }
 </style>
