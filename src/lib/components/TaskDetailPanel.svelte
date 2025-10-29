@@ -25,6 +25,8 @@
     $: generalInfo = processInstance ? mapGeneralInfo(processInstance) : [];
     $: timeline = processInstance ? mapTimeline(processInstance) : [];
     $: commentsData = processInstance ? mapComments(processInstance.taskInstances) : [];
+    // --- NEW: Reactive variable for comments on the form tab, including task names ---
+    $: formCommentsData = processInstance ? mapFormComments(processInstance.taskInstances) : [];
     $: documentsData = [] as DocumentGroup[];
 
     // When the form definition loads, initialize the formData for editable fields
@@ -37,7 +39,7 @@
         });
     }
     // When the actions load, set them up and select the first one by default.
-    // This now runs independently and won't reset the user's selection.
+
     $: if (formDefinition?.actions) {
         actionOptions = [...formDefinition.actions];
         if (actionOptions.length > 0 && (!selectedAction || !actionOptions.includes(selectedAction))) {
@@ -87,6 +89,20 @@
                 text: task.comments || '',
                 date: new Date(task.completionTime || task.createdAt).toLocaleString(),
                 avatar: (task.completedByUser?.fullName || 'SYS').substring(0, 2).toUpperCase()
+            }))
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    }
+
+    // --- NEW: Function to map comments for the form tab, including the task name ---
+    function mapFormComments(tasks: ProcessTaskInstance[]): any[] {
+        if (!tasks) return [];
+        return tasks
+            .filter(task => typeof task.comments === 'string' && task.comments.trim() !== '')
+            .map(task => ({
+                user: task.completedByUser?.fullName || $_('process_detail.system_user'),
+                text: task.comments || '',
+                date: new Date(task.completionTime || task.createdAt).toLocaleString(),
+                taskName: task.processElement.name
             }))
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }
@@ -218,25 +234,43 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Columna Derecha: Acciones y Contexto -->
+
+                    <!-- MODIFIED: Columna Derecha: Historial y Contexto -->
                     <div class="action-form">
                         <section class="info-section">
-                            <h3><Icon name="info" size={16}/> {$_('task_detail.process_data_title')}</h3>
-                            <div class="form-placeholder-details">
-                                {#if processInstance.businessDataFields && processInstance.businessDataFields.length > 0}
-                                    {#each processInstance.businessDataFields as field}
-                                        <div class="form-field">
-                                            <label>{field.label}</label>
-                                            <div class="value-box">
-                                            {field.value}
+                            <h3><Icon name="file-text" size={16}/> {$_('task_detail.request_description_title')}</h3>
+                            <p class="description-text">
+                                {processInstance.description || $_('process_detail.no_description')}
+                            </p>
+                        </section>  
+
+                        <section class="info-section comments-history-section">
+                            <h3><Icon name="message-square" size={16}/> {$_('task_detail.comments_history_title')}</h3>
+                            <div class="comments-list">
+                                {#if formCommentsData.length > 0}
+                                    {#each formCommentsData as comment}
+                                        <div class="comment-item">
+                                            <div class="comment-item-icon">
+                                                <Icon name="message-circle" size={24} />
+                                            </div>
+                                            <div class="comment-item-content">
+                                                <div class="comment-item-header">
+                                                    <span class="task-name-comment">{comment.taskName}</span>
+                                                    <strong class="user-name">{comment.user}</strong>
+                                                </div>
+                                                <p class="comment-text">{comment.text}</p>
+                                                <span class="comment-date">{comment.date}</span>
                                             </div>
                                         </div>
                                     {/each}
                                 {:else}
-                                    <p class="no-data-placeholder">{$_('process_detail.no_business_data')}</p>
+                                    <div class="no-data-placeholder">
+                                        <Icon name="info" size={20} />
+                                        <span>{$_('process_detail.no_comments')}</span>
+                                    </div>
                                 {/if}
                             </div>
-                        </section>  
+                        </section>
                     </div>
                 </div>
             {:else if activeTab === 'details'}
@@ -396,7 +430,7 @@
 
 .form-content {
     display: grid;
-    grid-template-columns: 1fr 380px;
+    grid-template-columns: 1fr 420px; /* Adjusted column width */
     gap: 2rem;
     height: 100%;
 }
@@ -410,6 +444,8 @@
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    max-height: 100%; /* Ensure it doesn't overflow the container */
+    overflow: hidden; /* Hide direct overflow */
 }
 .action-form h3, .dynamic-form h3, .action-section h3 {
   display: flex; align-items: center; gap: 0.5rem; margin: 0 0 1.5rem 0;
@@ -510,4 +546,100 @@ button { cursor: pointer; font-weight: 500; padding: 0.75rem 1.5rem; border-radi
 .download-btn { color: var(--text-secondary); }
 .download-btn:hover { color: var(--accent-color); }
 .required-star { color: #c53030; margin-left: 0.25rem; }
+/* --- NEW STYLES --- */
+/* Add these at the end of your <style> block */
+
+    .description-text {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.comments-history-section {
+    flex-grow: 1; /* Allows this section to fill available space */
+    min-height: 0; /* Prevents flexbox overflow issues */
+    display: flex;
+    flex-direction: column;
+}
+
+.comments-list {
+    overflow-y: auto; /* Makes the list scrollable */
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding-right: 0.5rem; /* Space for scrollbar */
+}
+
+.comment-item {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.comment-item-icon {
+    color: var(--accent-color);
+    flex-shrink: 0;
+    padding-top: 0.25rem;
+}
+
+.comment-item-content {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    width: 100%;
+}
+
+.comment-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.comment-item-header .task-name-comment {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.comment-item-header .user-name {
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.comment-text {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.comment-date {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-align: right;
+    display: block;
+}
+
+/* Enhancing the existing no-data-placeholder for this specific context */
+.comments-list .no-data-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    text-align: center;
+    padding: 2rem 1rem;
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    color: var(--text-secondary);
+    height: 100%;
+}
 </style>
