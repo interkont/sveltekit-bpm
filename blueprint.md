@@ -341,7 +341,7 @@ Se ha continuado con la implementación de la internacionalización (i18n), apli
   Problema: Se detectó y diagnosticó un error de comportamiento en UserEditPanel.svelte donde el uso de la tienda {$_} dentro de las etiquetas <option> de un <select> con bind:value provocaba fallos en la renderización y funcionalidad del formulario.
   Solución Implementada: Se aplicó el patrón recomendado por Svelte para manejar opciones dinámicas. Se creó un array reactivo en el bloque <script> que contiene los objetos de las opciones (con value y label traducido). El <select> en el HTML fue modificado para iterar sobre este array con un bloque #each. Esta solución desacopla la reactividad de svelte-i18n del mecanismo de bind:value de Svelte, garantizando un comportamiento estable y predecible del formulario en todos los idiomas.
 
-# 16. Visibilidad de Módulos Dinámica y Controlada por Backend
+## 16. Visibilidad de Módulos Dinámica y Controlada por Backend
   Se ha implementado una mejora de arquitectura para que la visibilidad de los módulos en la barra de navegación lateral (Sidebar) sea controlada dinámicamente por los permisos definidos en el backend, en lugar de ser estática.
 
   Respuesta de API Modificada:
@@ -429,3 +429,45 @@ Capa de Servicio y Estado:
 fieldDefinitionService.ts: Se completó el servicio para incluir todas las operaciones CRUD (create, update, delete) contra la API /fields.
 
 fieldDefinitionStore.ts: El store fue extendido para manejar estas operaciones, actualizando el estado de la aplicación de forma reactiva y evitando la necesidad de recargar los datos del servidor tras cada modificación.
+
+## 19. Centralización de Formularios Dinámicos y Nuevos Tipos de Campo
+Se ha ejecutado una refactorización arquitectónica clave para centralizar la lógica de renderizado de formularios dinámicos, eliminando la duplicación de código y facilitando la extensibilidad. Adicionalmente, se ha dotado a este nuevo sistema de la capacidad de manejar tipos de campo complejos como SELECT y GRID.
+
+### 19.1. Arquitectura y Componentes Clave
+- Creación del Componente DynamicForm.svelte:
+  - Se desarrolló un nuevo componente utilitario en src/lib/components/utils/DynamicForm.svelte.
+  - Este componente es ahora el único responsable de renderizar formularios a partir de una definición (fields).
+  - Soporta un modo editable (para la creación y edición de datos) y un modo de solo lectura (readonly), reutilizando la misma lógica de renderizado para mostrar los datos.
+
+- Creación del Componente EditableGrid.svelte:
+  - Para manejar la complejidad del tipo de campo GRID, se creó un sub-componente en src/lib/components/utils/EditableGrid.svelte.
+  - Encapsula toda la lógica para la creación de tablas dinámicas, incluyendo la adición y eliminación de filas y el renderizado de celdas con distintos tipos de input (TEXT, NUMBER, DATE, SELECT).
+
+- Refactorización de Vistas: Se refactorizaron tres componentes clave para que utilicen DynamicForm.svelte, eliminando su lógica de renderizado interna:
+  - StartProcessFormView.svelte (para iniciar nuevas instancias).
+  - TaskDetailPanel.svelte (para el formulario de tarea y la vista de detalles).
+  - ProcessDetailView.svelte (para la vista de solo lectura de los datos del proceso).
+
+### 19.2. Implementación de Nuevos Tipos de Campo
+Campo SELECT:
+- DynamicForm ahora puede renderizar un <select> a partir de la definición fieldType: 'SELECT'.
+Las opciones del desplegable se leen desde el array field.validations.options.
+Se corrigió la lógica de visualización para mostrar siempre el label de la opción, tanto en el modo de edición como en el de solo lectura.
+
+Campo GRID:
+Se implementó el renderizado de una tabla editable cuando se encuentra fieldType: 'GRID'.
+La definición de las columnas se lee desde field.validations.columns.
+El componente EditableGrid soporta anidamiento, permitiendo que una columna de la tabla sea a su vez de tipo SELECT.
+Se aplicaron estilos unificados para mejorar la UX y la consistencia visual con el resto de la aplicación.
+
+### 19.3. Mejoras de Lógica y Validación
+Inicialización de Datos: Se corrigió la lógica en StartProcessFormView y TaskDetailPanel para que los campos de tipo GRID se inicialicen siempre como un array vacío ([]) en lugar de null, solucionando problemas de reactividad al añadir la primera fila.
+
+Manejo de Datos en Solo Lectura: Se ajustó la preparación de datos en las vistas de solo lectura para "aplanar" los valores de los SELECT (extrayendo el value de objetos {label, value}), asegurando que el DynamicForm pueda mostrar el label correcto.
+
+Validación de GRID Obligatorio: Se robusteció la lógica de validación del formulario (isFormInvalid). Un campo GRID definido como obligatorio ahora se considera inválido si:
+
+No tiene al menos una fila.
+Cualquiera de sus celdas en cualquier fila está vacía.
+
+Internacionalización (i18n): Se añadieron todas las nuevas etiquetas de texto de la interfaz del EditableGrid a los archivos en.json y es.json, asegurando una experiencia de usuario completamente localizada.
