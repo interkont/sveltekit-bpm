@@ -11,6 +11,16 @@
     "role_singular": "Rol",
     "role_plural": "Roles"
   },
+  "forms": {
+    "select_placeholder": "Seleccione una opción...",
+    "grid": {
+      "add_row_button": "Añadir Fila",
+      "remove_row_tooltip": "Eliminar fila",
+      "actions_header": "Acciones",
+      "empty_state": "Haga clic en 'Añadir Fila' para comenzar.",
+      "no_data": "No hay datos en la tabla."
+    }
+  },
   "list": {
     "loading": "Cargando...",
     "actions_header": "Acciones",

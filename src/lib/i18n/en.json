@@ -11,6 +11,16 @@
     "role_singular": "Role",
     "role_plural": "Roles"
   },
+  "forms": {
+    "select_placeholder": "Select an option...",
+    "grid": {
+      "add_row_button": "Add Row",
+      "remove_row_tooltip": "Remove row",
+      "actions_header": "Actions",
+      "empty_state": "Click 'Add Row' to begin.",
+      "no_data": "There is no data in the grid."
+    }
+  },
   "list": {
     "loading": "Loading...",
     "actions_header": "Actions",

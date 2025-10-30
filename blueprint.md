@@ -396,3 +396,36 @@ El `textarea` para editar JSON en `TaskPropertiesPanel.svelte` fue eliminado y r
     - **Actualizar**: Los campos existentes se envían con su `id` correspondiente.
     - **Eliminar**: Los campos que se eliminan de la lista en la UI simplemente no se incluyen en el array `formFields` del payload final.
     - El objeto anidado `fieldDefinition` se elimina del payload, ya que es solo para uso del frontend.
+
+## 18. Módulo de Gestión de Biblioteca de Datos
+
+Se ha implementado un nuevo módulo completo, accesible desde la barra de navegación, para gestionar una "Biblioteca de Datos" (Data Library) centralizada. Esta biblioteca contiene las definiciones maestras de todos los campos de formulario (field definitions) que pueden ser reutilizados a lo largo de la aplicación, principalmente en los formularios de tareas del editor de procesos.
+
+### 18.1. Arquitectura y Componentes Clave
+Vista Principal (DataLibraryView.svelte):
+
+Muestra una tabla con todos los campos de la biblioteca, incluyendo su etiqueta, nombre técnico y tipo.
+Implementa una barra de búsqueda para filtrado en tiempo real.
+Sigue la arquitectura visual y funcional establecida por UserManagementView, asegurando la consistencia en la UX.
+
+Panel de Edición (FieldEditorPanel.svelte):
+
+Un panel deslizante que permite la creación y edición de campos.
+Validación Avanzada en Tiempo Real: Se implementó una lógica de validación robusta que habilita el botón de guardado solo si se cumplen todas las condiciones necesarias, incluyendo la configuración completa de campos complejos.
+Limpieza de Inputs: Utiliza una nueva función utilitaria (sanitizeTechnicalName) para limpiar automáticamente el campo "Nombre Técnico", eliminando espacios y caracteres especiales.
+Interfaz Dinámica para Tipos Complejos: El panel renderiza una interfaz de usuario específica según el tipo de campo seleccionado:
+SELECT: Muestra un botón "Configurar Opciones" que abre un modal para definir las etiquetas y valores de las opciones.
+GRID: Muestra un campo para dataSource y una lista para definir las columnas, permitiendo especificar el nombre, etiqueta y tipo de cada una.
+SELECT dentro de GRID: De forma anidada, si una columna es de tipo SELECT, también muestra un botón para configurar sus opciones a través de un modal, reutilizando la misma lógica para una UX consistente.
+Indicadores Visuales: Los botones de "Configurar Opciones" usan íconos y colores (naranja/alerta si está incompleto, verde/check si está completo) para dar feedback instantáneo al usuario sobre el estado de la configuración.
+
+Componente Reutilizable (DataTable.svelte):
+
+Se refactorizó la lógica de la tabla en un componente genérico ubicado en src/lib/components/utils/.
+Funcionalidad Encapsulada: El componente maneja internamente la búsqueda, el ordenamiento por columnas y la paginación (con selector de tamaño de página).
+Flexibilidad con Slots: Utiliza un patrón de slot único (slot="cell") que expone los datos de la fila y la columna al componente padre, permitiendo una personalización completa del renderizado de las celdas (ej. para badges, botones de acción, etc.).
+
+Capa de Servicio y Estado:
+fieldDefinitionService.ts: Se completó el servicio para incluir todas las operaciones CRUD (create, update, delete) contra la API /fields.
+
+fieldDefinitionStore.ts: El store fue extendido para manejar estas operaciones, actualizando el estado de la aplicación de forma reactiva y evitando la necesidad de recargar los datos del servidor tras cada modificación.

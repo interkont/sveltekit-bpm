@@ -10,6 +10,7 @@
     import { toast } from '$lib/stores/toast';
     import type { Task, ProcessInstance, BusinessDataItem, GeneralInfoItem, TimelineStep, TimelineStatus, Comment, DocumentGroup, ProcessTaskInstance } from '$lib/types';
     import { _ } from 'svelte-i18n';
+    import DynamicForm from '$lib/components/utils/DynamicForm.svelte';
 
     let activeTab: 'form' | 'details' = 'form';
     let selectedAction: string = '';
@@ -28,15 +29,34 @@
     // --- NEW: Reactive variable for comments on the form tab, including task names ---
     $: formCommentsData = processInstance ? mapFormComments(processInstance.taskInstances) : [];
     $: documentsData = [] as DocumentGroup[];
+    
+    // Create a key-value map from businessDataFields for the readonly DynamicForm
+    $: businessDataMap = processInstance?.businessDataFields.reduce((acc, field) => {
+        // For SELECT fields, the API might return an object {label, value}. We only need the value.
+        if (field.fieldType === 'SELECT' && typeof field.value === 'object' && field.value !== null && 'value' in field.value) {
+            acc[field.name] = field.value.value;
+        } else {
+            // For all other field types (TEXT, GRID, etc.), use the value as is.
+            acc[field.name] = field.value;
+        }
+        return acc;
+    }, {} as Record<string, any>) ?? {};
 
-    // When the form definition loads, initialize the formData for editable fields
+    // When the form definition loads, initialize formData with values from all fields.
     $: if (formDefinition?.fields) {
-        formData = {};
-        formDefinition.fields.forEach(field => {
-            if (!field.validations.isReadonly) {
-            formData[field.name] = field.value ?? '';
+        formData = formDefinition.fields.reduce((acc, field) => {
+            if (field.fieldType === 'GRID') {
+                // For GRID, initialize with an empty array if value is null
+                acc[field.name] = field.value ?? [];
+            } else if (field.fieldType === 'SELECT' && typeof field.value === 'object' && field.value !== null && 'value' in field.value) {
+                // For SELECT, extract the primitive value from the {label, value} object
+                acc[field.name] = field.value.value;
+            } else {
+                // For all other types, use the value as is or default to null
+                acc[field.name] = field.value ?? null;
             }
-        });
+            return acc;
+        }, {} as Record<string, any>);
     }
     // When the actions load, set them up and select the first one by default.
 
@@ -48,9 +68,30 @@
     }
 
     // --- FIX: Reactive statement to check form validity ---
-    $: isFormInvalid = formDefinition?.fields.some(field =>
-        field.validations?.isRequired && !field.validations?.isReadonly && (formData[field.name] === null || formData[field.name] === undefined || formData[field.name] === '')
-    ) ?? true;
+    $: isFormInvalid = formDefinition?.fields.some(field => {
+        if (!field.validations?.isRequired || field.validations?.isReadonly) {
+            return false; // Skip validation for non-required or readonly fields
+        }
+
+        const value = formData[field.name];
+
+        if (field.fieldType === 'GRID') {
+            // A required grid is invalid if it has no rows
+            if (!Array.isArray(value) || value.length === 0) {
+                return true;
+            }
+            // A required grid is also invalid if any cell in any row is empty
+            return value.some(row =>
+                field.validations.columns.some(col => {
+                    const cellValue = row[col.name];
+                    return cellValue === null || cellValue === undefined || cellValue === '';
+                })
+            );
+        }
+
+        // Standard validation for other field types
+        return value === null || value === undefined || value === '';
+    }) ?? true;
 
 
     function mapGeneralInfo(instance: ProcessInstance): GeneralInfoItem[] {
@@ -186,26 +227,7 @@
                     <div id="formdefinition">
                         <div class="dynamic-form">
                             <h3><Icon name="file-text" size={18}/> {$_('task_detail.form_title')}</h3>
-                            {#each formDefinition.fields as field (field.name)}
-                                <div class="form-field">
-                                    <label for={field.name}>
-                                    {field.label}
-                                    {#if field.validations?.isRequired && !field.validations?.isReadonly}<span class="required-star">*</span>{/if}
-                                    </label>
-                                    
-                                    {#if field.validations?.isReadonly}
-                                        <div class="value-box">{field.value}</div>
-                                    {:else if field.fieldType === 'NUMBER'}
-                                        <input type="number" id={field.name} bind:value={formData[field.name]} required={field.validations?.isRequired} />
-                                    {:else if field.fieldType === 'TEXTAREA'}
-                                        <textarea id={field.name} rows="4" bind:value={formData[field.name]} required={field.validations?.isRequired}></textarea>
-                                    {:else if field.fieldType === 'DATE'}
-                                        <input type="date" id={field.name} bind:value={formData[field.name]} required={field.validations?.isRequired} />
-                                    {:else}
-                                        <input type="text" id={field.name} bind:value={formData[field.name]} required={field.validations?.isRequired} />
-                                    {/if}
-                                </div>
-                            {/each}
+                            <DynamicForm fields={formDefinition.fields} bind:formData={formData} />
                         </div>
                         <div class="action-section">
                             <h3><Icon name="check-square" size={18}/> {$_('task_detail.complete_task_title')}</h3>
@@ -325,14 +347,7 @@
                                 <h3><Icon name="file-text" size={16}/> {$_('process_detail.request_details_tab')}</h3>
                                 <div class="form-placeholder-details">
                                     {#if processInstance.businessDataFields && processInstance.businessDataFields.length > 0}
-                                        {#each processInstance.businessDataFields as field}
-                                            <div class="form-field">
-                                                <label>{field.label}</label>
-                                                <div class="value-box">
-                                                {field.value}
-                                                </div>
-                                            </div>
-                                        {/each}
+                                    <DynamicForm fields={processInstance.businessDataFields} formData={businessDataMap} readonly={true} />
                                     {:else}
                                         <p class="no-data-placeholder">{$_('process_detail.no_business_data')}</p>
                                     {/if}
