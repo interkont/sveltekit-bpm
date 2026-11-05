@@ -1,6 +1,24 @@
-import { post, put, setAuthToken } from './apiService';
+import { get } from 'svelte/store';
+import { _ } from 'svelte-i18n';
+import { post, put, setAuthToken, setUnauthorizedHandler } from './apiService';
 import type { User } from '$lib/types'; // Assuming your User type is defined here
 import { authStore } from '$lib/stores/authStore'; // We'll use a dedicated auth store
+import { toast } from '$lib/stores/toast';
+
+/**
+ * Returns the token expiration as epoch milliseconds, or null if it can't be read.
+ */
+const getTokenExpiration = (token: string): number | null => {
+  try {
+    const payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const { exp } = JSON.parse(atob(payload));
+    return typeof exp === 'number' ? exp * 1000 : null;
+  } catch {
+    return null;
+  }
+};
+
+let expirationTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Interface for the login credentials payload
 interface LoginCredentials {
@@ -48,6 +66,7 @@ class AuthService {
 
         setAuthToken(response.token);
         authStore.set({ user: userForStore, token: response.token });
+        this.scheduleExpiration(response.token);
         
         // This localStorage part is now handled by the authStore itself,
         // but we'll leave it for now to avoid breaking changes if logic depends on it.
@@ -70,12 +89,35 @@ class AuthService {
    * Logs the user out by clearing the token, store, and localStorage.
    */
   logout() {
+    if (expirationTimer) {
+      clearTimeout(expirationTimer);
+      expirationTimer = null;
+    }
     setAuthToken(null);
     authStore.set({ user: null, token: null });
     if (typeof window !== 'undefined') {
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
     }
+  }
+
+  /**
+   * Ends the session because the token expired; the layout then shows the login view.
+   */
+  expireSession() {
+    if (!get(authStore).token) return;
+    this.logout();
+    toast.show(get(_)('login.session_expired'), 'error');
+  }
+
+  /**
+   * Logs the user out automatically when the token's `exp` is reached.
+   */
+  private scheduleExpiration(token: string) {
+    if (expirationTimer) clearTimeout(expirationTimer);
+    const expiresAt = getTokenExpiration(token);
+    if (expiresAt === null) return;
+    expirationTimer = setTimeout(() => this.expireSession(), Math.max(expiresAt - Date.now(), 0));
   }
 
   /**
@@ -91,6 +133,8 @@ class AuthService {
           const user = JSON.parse(userJson);
           setAuthToken(token);
           authStore.set({ user, token });
+          // Expired tokens are logged out right away by the timer
+          this.scheduleExpiration(token);
         } catch (e) {
           this.logout();
         }
@@ -130,3 +174,5 @@ class AuthService {
 }
 
 export const authService = new AuthService();
+
+setUnauthorizedHandler(() => authService.expireSession());

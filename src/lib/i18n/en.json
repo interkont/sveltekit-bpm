@@ -170,7 +170,8 @@
     "remember_me": "Remember me",
     "forgot_password": "Forgot your password?",
     "login_button": "Log In",
-    "logging_in": "Authenticating..."
+    "logging_in": "Authenticating...",
+    "session_expired": "Your session expired. Please log in again."
   },
   "sidebar": {
     "dashboard": "Dashboard",

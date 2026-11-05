@@ -3,10 +3,19 @@ import { PUBLIC_API_BASE_URL } from '$env/static/public';
 import { toast } from '$lib/stores/toast'; // <-- 1. Import the toast store
 
 let authToken: string | null = null;
+let onUnauthorized: (() => void) | null = null;
 
 export const setAuthToken = (token: string | null) => {
   authToken = token;
 };
+
+// Registered by authService to avoid a circular import. Called when the
+// backend rejects our token (expired or invalid).
+export const setUnauthorizedHandler = (handler: () => void) => {
+  onUnauthorized = handler;
+};
+
+class UnauthorizedError extends Error {}
 
 const handleResponse = async <T>(response: Response): Promise<T> => {
   if (response.ok) {
@@ -54,8 +63,16 @@ const request = async <T>(
 
   try {
     const response = await fetch(url, options);
+    // A 401 on an authenticated request means the session is no longer valid
+    if (response.status === 401 && authToken) {
+      onUnauthorized?.();
+      throw new UnauthorizedError('Session expired');
+    }
     return await handleResponse<T>(response);
   } catch (error) {
+    // The unauthorized handler already notifies the user
+    if (error instanceof UnauthorizedError) throw error;
+
     const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred.';
     
     // --- 2. Show a toast notification for any API error ---
