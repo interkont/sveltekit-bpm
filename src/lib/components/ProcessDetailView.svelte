@@ -4,6 +4,7 @@
   import { processDetailStore } from '$lib/stores/processDetailStore';
   import Icon from '$lib/components/Icon.svelte';
   import { _ } from 'svelte-i18n';
+  import DynamicForm from '$lib/components/utils/DynamicForm.svelte';
   
   import type { ProcessInstance, TimelineStep, TimelineStatus, GeneralInfoItem, Comment, DocumentGroup } from '$lib/types';
 
@@ -15,6 +16,18 @@
   $: timeline = processInstance ? mapTimeline(processInstance) : [];
   $: commentsData = processInstance ? mapComments(processInstance.taskInstances || []) : [];
   $: documentsData = [] as DocumentGroup[]; // Placeholder
+
+  // Create a key-value map from businessDataFields for the readonly DynamicForm
+  $: businessDataMap = processInstance?.businessDataFields.reduce((acc, field) => {
+      // For SELECT fields, the API might return an object {label, value}. We only need the value.
+      if (field.fieldType === 'SELECT' && typeof field.value === 'object' && field.value !== null && 'value' in field.value) {
+          acc[field.name] = field.value.value;
+      } else {
+          // For all other field types (TEXT, GRID, etc.), use the value as is.
+          acc[field.name] = field.value;
+      }
+      return acc;
+  }, {} as Record<string, any>) ?? {};
 
   // --- Helper functions ---
   function mapGeneralInfo(instance: ProcessInstance): GeneralInfoItem[] {
@@ -74,12 +87,12 @@
   <aside class="detail-panel" transition:slide={{ duration: 400, easing: quintOut, axis: 'x' }}>
     {#if $processDetailStore.loading}
         <div class="state-placeholder">
-            <Icon name="loader" size="32" spinning={true} />
+            <Icon name="loader" size={32} spinning={true} />
             <p>{$_('process_detail.loading')}</p>
         </div>
     {:else if $processDetailStore.error}
         <div class="state-placeholder error">
-            <Icon name="alert-triangle" size="32" />
+            <Icon name="alert-triangle" size={32} />
             <p>{$_('process_detail.error')}: {$processDetailStore.error}</p>
         </div>
     {:else if processInstance}
@@ -158,14 +171,7 @@
                 <div class="form-details-section">
                 <div class="form-placeholder">
                     {#if processInstance.businessDataFields && processInstance.businessDataFields.length > 0}
-                        {#each processInstance.businessDataFields as field}
-                        <div class="form-field">
-                            <label>{field.label}</label>
-                            <div class="value-box">
-                            {field.value}
-                            </div>
-                        </div>
-                        {/each}
+                        <DynamicForm fields={processInstance.businessDataFields} formData={businessDataMap} readonly={true} />
                     {:else}
                         <p class="no-data-placeholder">{$_('process_detail.no_business_data')}</p>
                     {/if}

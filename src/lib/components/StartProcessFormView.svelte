@@ -7,6 +7,7 @@
   import { toast } from '$lib/stores/toast';
   import { modal } from '$lib/stores/modal';
   import { _ } from 'svelte-i18n';
+  import DynamicForm from '$lib/components/utils/DynamicForm.svelte';
 
   export let processDefinition: ProcessDefinition;
 
@@ -23,9 +24,13 @@
     if (!processDefinition) return; // Prevent API call if prop is null
     try {
       formDefinition = await processDefinitionService.getStartForm(processDefinition.id);
-      // Initialize businessData with null values for each field
+      // Initialize businessData, setting GRIDs to empty arrays and others to null
       formDefinition.fields.forEach(field => {
-        businessData[field.name] = null;
+        if (field.fieldType === 'GRID') {
+          businessData[field.name] = [];
+        } else {
+          businessData[field.name] = null;
+        }
       });
     } catch (e) {
       error = e instanceof Error ? e.message : $_('start_process_form.error_loading_form');
@@ -39,10 +44,35 @@
     if (!formDefinition || !description.trim()) {
       return false;
     }
+
     for (const field of formDefinition.fields) {
-      if (field.validations.isRequired && (businessData[field.name] === null || businessData[field.name] === '')) {
-        return false;
-      }
+        if (!field.validations.isRequired) {
+            continue; // Skip non-required fields
+        }
+
+        const value = businessData[field.name];
+
+        if (field.fieldType === 'GRID') {
+            // A required grid is invalid if it's not an array or has no rows
+            if (!Array.isArray(value) || value.length === 0) {
+                return false;
+            }
+            // A required grid is also invalid if any cell in any row is empty
+            const isAnyRowIncomplete = value.some(row =>
+                field.validations.columns.some(col => {
+                    const cellValue = row[col.name];
+                    return cellValue === null || cellValue === undefined || cellValue === '';
+                })
+            );
+            if (isAnyRowIncomplete) {
+                return false;
+            }
+        } else {
+            // Standard validation for other field types
+            if (value === null || value === undefined || value === '') {
+                return false;
+            }
+        }
     }
     return true;
   })();
@@ -113,24 +143,7 @@
         <hr class="divider" />
 
         <!-- Dynamic fields from the API -->
-        {#each formDefinition.fields as field (field.name)}
-          <div class="form-field">
-            <label for={field.name}>
-              {field.label}
-              {#if field.validations.isRequired}<span class="required-star">*</span>{/if}
-            </label>
-            
-            {#if field.fieldType === 'NUMBER'}
-              <input type="number" id={field.name} bind:value={businessData[field.name]} required={field.validations.isRequired} disabled={field.validations.isReadonly} />
-            {:else if field.fieldType === 'TEXTAREA'}
-               <textarea id={field.name} rows="4" bind:value={businessData[field.name]} required={field.validations.isRequired} disabled={field.validations.isReadonly}></textarea>
-            {:else if field.fieldType === 'DATE'}
-               <input type="date" id={field.name} bind:value={businessData[field.name]} required={field.validations.isRequired} disabled={field.validations.isReadonly} />
-            {:else} <!-- Default to TEXT -->
-              <input type="text" id={field.name} bind:value={businessData[field.name]} required={field.validations.isRequired} disabled={field.validations.isReadonly} />
-            {/if}
-          </div>
-        {/each}
+        <DynamicForm fields={formDefinition.fields} bind:formData={businessData} />
 
         {#if error}
           <div class="error-banner">{error}</div>
@@ -163,7 +176,7 @@
   .back-btn { display: flex; align-items: center; gap: 0.5rem; background: none; border: none; font-size: 1rem; color: var(--text-secondary); cursor: pointer; font-weight: 500; }
   .back-btn:hover { color: var(--text-primary); }
 
-  .form-container { background-color: var(--bg-primary); padding: 2rem; border-radius: 12px; border: 1px solid var(--border-color); max-width: 800px; margin: 0 auto; width: 100%; }
+  .form-container { background-color: var(--bg-primary); padding: 2rem; border-radius: 12px; border: 1px solid var(--border-color); max-width: 75%; margin: 0 auto; width: 100%; }
   
   .state-placeholder { display: flex; align-items: center; justify-content: center; min-height: 200px; gap: 1rem; color: var(--text-secondary); }
   .state-placeholder.error { color: #c53030; }

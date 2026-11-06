@@ -167,7 +167,7 @@ export interface FieldDefinition {
   id: number;
   name: string;
   label: string;
-  fieldType: 'TEXT' | 'NUMBER' | 'TEXTAREA' | 'DATE';
+  fieldType: 'TEXT' | 'NUMBER' | 'TEXTAREA' | 'DATE' | 'SELECT' | 'GRID' | 'FILE';
   validations: Record<string, any> | null;
 }
 

@@ -67,8 +67,8 @@ El cliente permite:
 - **Administrar usuarios y roles de proceso** (CRUD).
 - **Personalizar** el perfil, el tema claro/oscuro y el idioma (es/en).
 
-Las pantallas **Dashboard**, **Librería de datos** y **Log de reglas** existen en el menú, pero hoy son maqueta o
-placeholder. Ver §5.2, §5.8 y §5.9.
+Las pantallas **Dashboard** y **Log de reglas** existen en el menú, pero hoy son maqueta o placeholder (§5.2,
+§5.9). La **Librería de datos** es funcional desde la integración de la rama `form-data` (2026-11-06, §5.8).
 
 ---
 
@@ -197,7 +197,7 @@ Asignación de módulos por rol de sistema:
 | `#new-process-model` | `ProcessEditorView.svelte` (sin `processId`) | PROC | Modelador en modo `create`. | ver §5.6 |
 | `#process-model-detail/{id}` | `ProcessEditorView.svelte processId={id}` | PROC | Modelador en modo `view`; Editar pasa a `edit`. Permite guardar (con versionado), eliminar y guardar metadatos. | ver §5.6 |
 | `#users` | `UserManagementView.svelte` | ORG | Pestañas Usuarios / Roles (`layout/Tabs.svelte`). CRUD de usuarios (`UserEditPanel`) y de roles con miembros (`RoleEditPanel`). | `userStore`, `processRoleStore`, `modal`, `toast` |
-| `#data-library` | `DataLibraryView.svelte` | LIBFORM | **Placeholder**: solo cabecera (`DataLibraryView.svelte:13-15`). | ninguno |
+| `#data-library` | `DataLibraryView.svelte` | LIBFORM | CRUD de la biblioteca de campos con `DataTable` y `FieldEditorPanel` (§5.8). | `GET/POST/PUT/DELETE /fields` |
 | `#rules-log` | `RulesLogView.svelte` | LOG | **Placeholder**: solo cabecera (`RulesLogView.svelte:13-15`). | ninguno |
 | *(global)* | `ProfilePanel.svelte` | — | Se abre al hacer clic en el avatar del Header. Permite editar nombre, cambiar contraseña, cambiar idioma, ver roles y cerrar sesión. | `authStore`, `authService.updateProfile`, `profilePanelStore` |
 
@@ -481,7 +481,7 @@ no se usa.
    - copia los metadatos;
    - reconstruye el lienzo **solo desde `diagramJson`** (no hay transformación inversa);
    - `setViewport` y `fitView` con `setTimeout`.
-4. Intenta mapear `elements[].formFields` / `actions`, pero el BE no los devuelve (§5.8).
+4. Mapea `elements[].formFields` / `actions`, que el BE devuelve desde la integración de `api-formdata` (§5.8).
 
 **Guardar** (`handleSave`, `:225-251`):
 1. Si el proceso existe: `GET /processes/{id}/save-ask` devuelve `{action, state, instancesCount}`.
@@ -500,7 +500,7 @@ no se usa.
 - `CREATE_NEW_VERSION` si el estado es `ACTIVE` o hay instancias; si no, `UPDATE_IN_PLACE` (`:71-110`).
 - **Nueva versión** (`:112-170`):
   - crea `version+1` en `DRAFT`;
-  - **copia los `ElementFormLink` de la versión anterior** e ignora los `formFields` del payload.
+  - crea los `ElementFormLink` **solo desde los `formFields` del payload** (ya no copia los de la versión anterior).
 - **In-place** (`:172-201`):
   - si pasa a `ACTIVE` y ya existe otra activa, lanza un error;
   - `syncElements` sincroniza los elementos por `bpmnElementId`;
@@ -595,11 +595,21 @@ Pestañas con `layout/Tabs.svelte`.
 
 ### 5.8 Librería de datos y form builder
 
-- **Vista `#data-library`:** placeholder, sin lógica.
+- **Vista `#data-library`** (`DataLibraryView.svelte`, rama `form-data` integrada el 2026-11-06):
+  - tabla de campos con búsqueda, orden y paginación (`utils/DataTable.svelte`, slot `cell`);
+  - alta y edición en `FieldEditorPanel.svelte`: el nombre técnico se limpia con `sanitizeTechnicalName`
+    (`utils/stringUtils.ts`); SELECT abre un modal de opciones; GRID define `dataSource` y columnas, con
+    SELECT anidado; el guardado se habilita solo con la configuración completa;
+  - `fieldDefinitionService` y `fieldDefinitionStore` cubren el CRUD de `/fields` y actualizan el estado sin
+    recargar.
+- **Formularios dinámicos** (`utils/DynamicForm.svelte`, `utils/EditableGrid.svelte`): un único renderizador para
+  `StartProcessFormView`, `TaskDetailPanel` y `ProcessDetailView` (modo editable y solo lectura). SELECT lee
+  `validations.options` y muestra el `label`; en solo lectura se "aplana" el `{label, value}` que envía el BE.
+  GRID lee `validations.columns`, se inicializa como `[]` y, si es obligatorio, exige al menos una fila sin
+  celdas vacías.
 - **Form builder en el editor** (`properties/TaskPropertiesPanel.svelte`, se usa con `userTask`/`startEvent`):
-  - **Fuente de campos:** `fieldDefinitionStore.fetchFields()` → `GET /fields` (`fieldDefinitionService.ts:14`).
-    **Ese endpoint no existe en el BE (404)**. El selector queda vacío y los campos ya vinculados no se muestran,
-    porque se exige `fieldMap.size > 0` (`:33-37`).
+  - **Fuente de campos:** `fieldDefinitionStore.fetchFields()` → `GET /fields` (solo ADMIN en el BE). Los campos
+    vinculados se muestran solo si `fieldMap.size > 0` (`:33-37`).
   - **Operaciones:**
     - agregar campo desde `svelte-select` (`:85-97`, `:233-246`);
     - reordenar con SortableJS (`:122-134`);
@@ -611,12 +621,10 @@ Pestañas con `layout/Tabs.svelte`.
     - tags libres más las sugerencias Approve/Reject/Return/Complete (`:26`);
     - las sugerencias se guardan **con el texto traducido** (`$_('editor.action_x')`, `:209-211`), así que el
       valor depende del idioma de quien modela.
-- **Persistencia:** **el BE no persiste `formFields` ni `actions`.**
-  - `syncElements` no escribe `ElementFormLink` (`BE: process.service.js:34-61`).
-  - `ProcessElement` no tiene columna `actions` (`BE: models/process-element.model.js`).
-  - Resultado: `GET /tasks/{id}/form` siempre devuelve `actions: ['complete']` (`BE: tasks/task.service.js:124`).
-  - Los formularios solo funcionan si los `ElementFormLink` se cargan directamente en la base de datos.
-- **Modelo de campo:** `FieldDefinition {id, name, label, fieldType: TEXT|NUMBER|TEXTAREA|DATE, validations}`
+- **Persistencia:** el BE (`api-formdata`, integrada en `main` y `main-ts` el 2026-11-06) persiste `formFields` y
+  `actions`: el guardado sincroniza los vínculos del payload, `GET /processes/{id}` los devuelve por elemento y
+  `GET /tasks/{id}/form` devuelve las `actions` del elemento (o `['complete']` si no tiene).
+- **Modelo de campo:** `FieldDefinition {id, name, label, fieldType, validations}`; tipos del catálogo del BE (`GET /fields/types`): TEXT, TEXTAREA, NUMBER, SELECT, GRID, FILE, DATE
   (`types.ts:166-172`).
 
 ### 5.9 Log de reglas / decisiones (`#rules-log`)
@@ -666,12 +674,12 @@ Pestañas con `layout/Tabs.svelte`.
 | `ProcessModel` | 88-95 | **sin uso** (solo en `processModelDetailStore`, también muerto) | — |
 | `ProcessDefinition` | 97-109 | editor, listas | No declara `sequences`. `diagramJson` sale de la columna `bpmn_xml`. |
 | `ProcessDefinitionData` | 112-118 | panel de proceso | `status` es una unión de literales; el BE usa string. |
-| `FormFieldPayload` | 122-130 | form builder | Equivale a `ElementFormLink` del BE, pero **no se persiste** (§5.8). |
+| `FormFieldPayload` | 122-130 | form builder | Equivale a `ElementFormLink` del BE; se persiste al guardar el proceso (§5.8). |
 | `ProcessElementPayload` | 132-142 | transformer | `webhook_target` y `sla_definition` en snake_case **no coinciden** con los atributos Sequelize. `actions` no existe en el BE. |
 | `SequenceFlowPayload` | 144-148 | transformer | OK. |
 | `ProcessDefinitionPayload` | 150-155 | POST/PUT `/processes` | OK salvo las notas anteriores. |
 | `SaveActionResponse` | 157-161 | `save-ask` | OK. |
-| `FieldDefinition` | 166-172 | `fieldDefinitionStore` | El modelo BE existe, pero **no hay ruta** `/fields`. |
+| `FieldDefinition` | 166-172 | `fieldDefinitionStore` | CRUD en `BE: /api/fields` (solo ADMIN). |
 | `FormFieldDefinition`, `StartFormDefinition`, `TaskFormDefinition` | 175-192 | formularios dinámicos | `validations` es opcional en el tipo, pero el código lo trata como obligatorio (errores de svelte-check). |
 | UI: `StatCard` … `ProcessTypeCard` | 196-214 | dashboard y paneles | `ProcessMockData`, `PreviousTaskContext`, `ProcessTypeCard`, `DocumentFile` y `UserTask` están sin uso o son mock. |
 | `ModalConfig` | **203** | `stores/modal.ts` | **Error de sintaxis:** `onConfirm: ()-› void` usa U+203A en lugar de `=>`. Rompe `tsc`/`prettier`/`eslint` para el archivo. En runtime no falla porque solo se importa con `import type`. |
@@ -711,7 +719,7 @@ Base: `PUBLIC_API_BASE_URL`. Todas pasan por `apiService.ts`, que añade `Author
 | `processDefinitionService.patchProcessMetadata` (`:102`) | PATCH | `/processes/{id}` | Sí | allowlist name, description, category, status. |
 | `processDefinitionService.deleteProcess` (`:117`) | DELETE | `/processes/{id}` | Sí | Sin verificar si hay instancias. |
 | `processDefinitionService.getStartForm` (`:131`) | GET | `/processes/{id}/start-form` | Sí | `processes.routes.js:17`. |
-| `fieldDefinitionService.getAllFields` (`fieldDefinitionService.ts:14`) | GET | **`/fields`** | **NO (404)** | Existe el modelo `FieldDefinition`, pero no hay ruta montada en `BE: api/routes.js:11-17`. |
+| `fieldDefinitionService` (CRUD) | GET/POST/PUT/DELETE | `/fields`, `/fields/{id}` | Sí (solo ADMIN) | Integrado con `api-formdata` (BE) y `form-data` (FE) el 2026-11-06. |
 
 Las líneas citadas son las de la llamada `get/post/put/patch/del` dentro de cada método.
 
@@ -775,7 +783,7 @@ Las líneas citadas son las de la llamada `get/post/put/patch/del` dentro de cad
 | `processDefinitionStore` | `{definitions, loading, error}` + `fetchDefinitions` | — | NewProcessView |
 | `processRoleStore` | `{roles, loading, error}` + CRUD, con caché `hasBeenLoaded` | — | editor, usuarios |
 | `userStore` | `{users, loading, error}` + CRUD | — | usuarios, roles |
-| `fieldDefinitionStore` | `{fields, fieldMap, loading, error}` + `fetchFields` | — | TaskPropertiesPanel |
+| `fieldDefinitionStore` | `{fields, fieldMap, loading, error}` + `fetchFields` y CRUD | — | TaskPropertiesPanel, DataLibraryView, FieldEditorPanel |
 | `processModelDetailStore` | — | — | **muerto** (solo se importa en `+page.svelte:10`) |
 | `taskModal` | — | — | **muerto** (lo usaba `TaskFormModal`, también muerto) |
 
@@ -977,8 +985,6 @@ Prioridad: **C** = crítica (seguridad o pérdida de datos/funcionalidad), **A**
 
 | P | Hallazgo | Ubicación |
 |---|---|---|
-| C | `GET /fields` no existe: el form builder queda inutilizable. | `fieldDefinitionService.ts:14`; `BE: api/routes.js:11-17` |
-| C | `formFields` y `actions` no se persisten ni se devuelven; las acciones de tarea siempre son `['complete']`. | `ProcessEditorView.svelte:164-189`; `BE: process.service.js:34-61,132-168,277-302`; `BE: task.service.js:124` |
 | A | `webhook_target`/`sla_definition` en snake_case: el BE los ignora. | `process-transformer.ts:54,60`; `types.ts:138-139` |
 | A | Cualquier 401 de negocio cierra la sesión (p. ej. contraseña actual errónea). | `apiService.ts:67`; `BE: auth.service.js:64-67` |
 | A | Los errores del BE llegan como 500 "Something broke!" y se pierde el mensaje (p. ej. credenciales inválidas). | `BE: error.middleware.js:18-21`; `apiService.ts:29-32` |
@@ -1111,6 +1117,7 @@ Prioridad: **C** = crítica (seguridad o pérdida de datos/funcionalidad), **A**
 | 2025-10-23 | `75ecc20`, `b7c7859` | i18n de los componentes. |
 | 2025-10-27 | `7f44244` | Visibilidad de módulos según `modules` del login. |
 | 2025-10-28 → 10-29 | `a0ed2d2`, `047856c`, `89d4d19` | Form builder (campos y acciones) y refactor de `TaskDetailPanel` (comentarios cronológicos). |
+| 2025-10-29 → 10-30 | `731f23d`…`5b45c34` (rama `form-data`) | Librería de datos (CRUD con `DataTable` y `FieldEditorPanel`), SELECT y GRID con `DynamicForm` y `EditableGrid`. Integrada en `main` el 2026-11-06. |
 | 2026-11-05 | `661ed4b` | Cierre de sesión al expirar el JWT (`setUnauthorizedHandler`, `expireSession`, `login.session_expired`). |
 
 ---
@@ -1146,5 +1153,5 @@ comprobar visualmente que no hay regresiones. Esta decisión está pendiente.
   modelador vive en `#new-process-model` / `#process-model-detail/{id}`.
 - **Visibilidad de módulos por `modules`** del login (antigua §16). Si el Sidebar sale vacío después de una
   actualización, cerrar sesión y volver a entrar para regenerar el usuario en `localStorage`.
-- **Form builder con `svelte-select` + SortableJS** y limpieza del payload (antigua §17). Su persistencia en el
-  backend **no está implementada** (§5.8).
+- **Form builder con `svelte-select` + SortableJS** y limpieza del payload (antigua §17). El backend lo persiste
+  desde la integración de `api-formdata` (§5.8).
